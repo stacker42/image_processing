@@ -16,8 +16,13 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 from analysis import views
+from resumable.views import ResumableUploadView
+from django.conf.urls.static import static
+from django.conf import settings
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^', views.home)
-]
+    url(r'^$', views.home, name="home"),
+    url(r'test/$', views.test, name="test"),
+    url(r'^upload(?:/(?P<qquuid>\S+))?', views.UploadView.as_view(), name='upload')
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

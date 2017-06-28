@@ -1,0 +1,4 @@
+temporary_chunks/
+temporary_uploads/
+.idea/
+*.pyc
