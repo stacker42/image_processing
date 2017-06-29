@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.admin',
+    'registration',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -129,3 +130,8 @@ FILE_UPLOAD_TEMP_DIR = '/tmp'
 UPLOAD_DIRECTORY = os.path.join(BASE_DIR, 'temporary_uploads')
 
 CHUNKS_DIRECTORY = os.path.join(BASE_DIR, 'temporary_chunks')
+
+ACCOUNT_ACTIVATION_DAYS = 7
+
+DEFAULT_FROM_EMAIL = "wf44@kent.ac.uk"
+

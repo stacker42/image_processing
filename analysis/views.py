@@ -8,7 +8,10 @@ from django.views.generic import View
 import utils
 from forms import UploadFileForm
 import json
+from django.contrib.auth.decorators import login_required
 
+
+@login_required
 def home(request):
     """
     Let the user upload files
@@ -49,7 +52,7 @@ class UploadView(View):
         """
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
-            utils.handle_upload(request.FILES['qqfile'], form.cleaned_data)
+            utils.handle_upload(request.FILES['qqfile'], form.cleaned_data, request)
             return utils.make_response(content=json.dumps({ 'success': True }))
         else:
             return utils.make_response(status=400,

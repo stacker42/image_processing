@@ -45,7 +45,7 @@ def save_upload(f, path):
             destination.write(f.read())
 
 
-def handle_upload(f, fileattrs):
+def handle_upload(f, fileattrs, request):
     """ Handle a chunked or non-chunked upload.
     """
 
@@ -75,6 +75,7 @@ def handle_deleted_file(uuid):
 
     loc = os.path.join(settings.UPLOAD_DIRECTORY, uuid)
     shutil.rmtree(loc)
+
 
 def make_response(status=200, content_type='text/plain', content=None):
     """ Construct a response to an upload request.
