@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+<h1>Start processing your uploaded files</h1>
+
+<ul>
+    {% for file in unprocessed %}
+    <li><a href="{% url 'process_header' file.uuid %}">Check header on {{ file.filename }}</a></li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

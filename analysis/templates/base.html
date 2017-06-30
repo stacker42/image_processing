@@ -8,7 +8,7 @@
 <body>
 
 <div class="navbar navbar-default">
-      <div class="container-fluid">
+      <div class="container">
     <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
       <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
@@ -23,18 +23,29 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        <li><a href="{% url 'home' %}">Home</a></li>
-          <li><a href="#">Process</a></li>
-          <li><a href="{% url 'auth_login' %}">Login</a></li>
-          <li><a href="{% url 'auth_logout' %}">Logout</a></li>
+          {% if not user.is_authenticated %}
+            <li><a href="{% url 'auth_login' %}">Login</a></li>
+          {% else %}
+              <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'unprocessed_uploads' %}">Unprocessed uploads</a></li>
+            <li><a href="{% url 'auth_logout' %}">Logout</a></li>
+          {% endif %}
       </ul>
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
 </div>
-<div class="content">
+<div class="container">
 
     {% block content %}
     {% endblock %}
+
+    <br />
+    <br />
+    <footer>
+        <div class="well">
+            <p><a href="http://astro.kent.ac.uk/">Centre for Astrophysics and Planetary Science</a></p>
+        </div>
+    </footer>
 
 </div>
 </body>

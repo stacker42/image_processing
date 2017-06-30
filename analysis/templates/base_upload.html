@@ -45,9 +45,13 @@
                     <span class="qq-edit-filename-icon-selector qq-edit-filename-icon" aria-label="Edit filename"></span>
                     <input class="qq-edit-filename-selector qq-edit-filename" tabindex="0" type="text">
                     <span class="qq-upload-size-selector qq-upload-size"></span>
-                    <button type="button" class="qq-btn qq-upload-cancel-selector qq-upload-cancel">Cancel</button>
-                    <button type="button" class="qq-btn qq-upload-retry-selector qq-upload-retry">Retry</button>
-                    <button type="button" class="qq-btn qq-upload-delete-selector qq-upload-delete">Delete</button>
+
+
+                    <button type="button" class="qq-upload-pause-selector qq-upload-pause btn">Pause</button>
+                    <button type="button" class="qq-upload-continue-selector qq-upload-continue btn">Continue</button>
+                    <button type="button" class="qq-upload-cancel-selector btn btn-danger">Cancel</button>
+                    <button type="button" class="qq-upload-retry-selector btn btn-success">Retry</button>
+                    <button type="button" class="qq-upload-delete-selector btn btn-danger">Delete</button>
                     <span role="status" class="qq-upload-status-text-selector qq-upload-status-text"></span>
                 </li>
             </ul>
@@ -78,12 +82,11 @@
         </div>
     </script>
 
-
-    <h1>{{ request.user.username }}</h1>
-
     <h1>FITS File Upload Area</h1>
     <p>Please select/drop a FITS file, and then click 'Upload' to upload the file to our server.<br />
-    Once the file is uploaded (which can be paused and resumed) a link will appear on this page to process it.</p>
+    Once the file is uploaded (which can be paused and resumed) a link will appear on this page to process it.<br />
+    Need to close your browser during the upload? That's fine! Just re-add and upload the file when you re-visit the site.
+    Your progress will be kept.</p>
 
 
 
@@ -91,6 +94,7 @@
     ====================================================================== -->
     <div id="fine-uploader-manual-trigger"></div>
 
+    <br />
     <div id="uploaded-files"></div>
 
 
@@ -122,19 +126,32 @@
                 enableAuto: true
             },
 
+            validation: {
+              acceptFiles: 'image/fits,application/fits', allowedExtensions: ['fits']
+            },
+
+
             callbacks: {
+                /**
+                 * When all uploads have been completed, list the successful ones out and then provide a link for the
+                 * user to go on and process the upload
+                 * @param succeeded list of all the uploads (ids) that succeeded
+                 * @param failed list of all the uploads (ids) that failed
+                 */
                 onAllComplete: function(succeeded, failed) {
+                    // Get all the attributes of uploads that have been successful. This is needed to get their names.
                     uploads = manualUploader.getUploads({status: qq.status.UPLOAD_SUCCESSFUL})
                     completedUploadArea = document.getElementById('uploaded-files')
                     for(f in succeeded) {
                         node = document.createElement("p")
-                        node.appendChild(document.createTextNode("Process" + uploads[f].uuid + " " + uploads[f].name))
+                        node.appendChild(document.createTextNode(uploads[f].name + " successfully uploaded"))
                         completedUploadArea.appendChild(node)
                         //alert(uploads[f].uuid + " " + uploads[f].name)
                     }
-                },
-                onSessionRequestComplete: function(response, success, xhrOrXdr) {
-                    console.log(response)
+                    node = document.createElement("a")
+                    node.href = "{% url 'unprocessed_uploads' %}"
+                    node.appendChild(document.createTextNode("Process my uploads"))
+                    completedUploadArea.appendChild(node)
                 }
             }
         });

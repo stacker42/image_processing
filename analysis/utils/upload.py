@@ -3,12 +3,28 @@ import os.path
 import shutil
 from django.conf import settings
 from django.http import HttpResponse
+from analysis.models import UnprocessedUpload
+import time
+from analysis.utils.fits import get_header
 
+def check_valid_file(path, uuid):
+    """
+    Check that the FITS reader can actually read the file. If not, then delete it.
+    :param path: The full path to the file
+    :param uuid: The UUID of the file
+    """
+    try:
+        get_header(path)
+        return True
+    except IOError:
+        handle_deleted_file(uuid)
+        return False
 
 # combine_chunks, save_upload, handle_upload and handled_deleted_file are based on the examples given by FineUploader
 # See: https://github.com/FineUploader/server-examples/tree/master/python/django-fine-uploader
 
-def combine_chunks(total_parts, total_size, source_folder, dest):
+
+def combine_chunks(total_parts, total_size, source_folder, dest, uuid):
     """ Combine a chunked file into a whole file again. Goes through each part
     , in order, and appends that part's bytes to another destination file.
 
@@ -24,6 +40,8 @@ def combine_chunks(total_parts, total_size, source_folder, dest):
             part = os.path.join(source_folder, str(i))
             with open(part, 'rb') as source:
                 destination.write(source.read())
+
+    return check_valid_file(dest, uuid)
 
 
 def save_upload(f, path):
@@ -46,7 +64,8 @@ def save_upload(f, path):
 
 
 def handle_upload(f, fileattrs, request):
-    """ Handle a chunked or non-chunked upload.
+    """
+    Handle a chunked or non-chunked upload. Add information about the unprocessed upload to the database.
     """
 
     chunked = False
@@ -54,20 +73,53 @@ def handle_upload(f, fileattrs, request):
     dest = os.path.join(dest_folder, fileattrs['qqfilename'])
 
     # Chunked
+    # Only chunks are saved here
     if fileattrs.get('qqtotalparts') and int(fileattrs['qqtotalparts']) > 1:
         chunked = True
         dest_folder = os.path.join(settings.CHUNKS_DIRECTORY, fileattrs['qquuid'])
         dest = os.path.join(dest_folder, fileattrs['qqfilename'], str(fileattrs['qqpartindex']))
-    save_upload(f, dest)
+    # Will save whole upload if not chunked, or just the chunk
+
+    if not chunked:
+        # If the file is whole, then put its information into the database, and save it
+        save_upload(f, dest)
+        if check_valid_file(dest, fileattrs['qquuid']):
+            upload = UnprocessedUpload()
+            upload.uuid = fileattrs['qquuid']
+            upload.filename = fileattrs['qqfilename']
+            upload.user = request.user
+            upload.upload_time = time.time()
+            upload.save()
+        else:
+            return False  # not a valid file
+    else:
+        # If the file is chunked, then at this stage, we only want to save the next chunk to disk in the chunk
+        # directory
+        save_upload(f, dest)
 
     # If the last chunk has been sent, combine the parts.
     if chunked and (fileattrs['qqtotalparts'] - 1 == fileattrs['qqpartindex']):
-        combine_chunks(fileattrs['qqtotalparts'],
+        # Save to disk
+        if combine_chunks(fileattrs['qqtotalparts'],
                              fileattrs['qqtotalfilesize'],
                              source_folder=os.path.dirname(dest),
-                             dest=os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']))
+                             dest=os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']),
+                             uuid=fileattrs['qquuid']):
+            # save to db
+            upload = UnprocessedUpload()
+            upload.uuid = fileattrs['qquuid']
+            upload.filename = fileattrs['qqfilename']
+            upload.user = request.user
+            upload.upload_time = time.time()
+            upload.save()
 
-        shutil.rmtree(os.path.dirname(os.path.dirname(dest)))
+
+            shutil.rmtree(os.path.dirname(os.path.dirname(dest)))
+        else:
+            # not a valid file
+            return False
+
+    return True
 
 
 def handle_deleted_file(uuid):

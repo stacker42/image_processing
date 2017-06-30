@@ -16,7 +16,6 @@ Including another URLconf
 from django.conf.urls import url, include
 from django.contrib import admin
 from analysis import views
-from resumable.views import ResumableUploadView
 from django.conf.urls.static import static
 from django.conf import settings
 
@@ -24,7 +23,10 @@ from django.conf import settings
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^$', views.home, name="home"),
-    url(r'test/$', views.test, name="test"),
+    url(r'^unprocessed_uploads/$', views.unprocessed_uploads, name="unprocessed_uploads"),
+    url(r'^process/header/(?P<uuid>[0-9A-Za-z_\-]+)/$', views.process_header, name="process_header"),
+    url(r'process/add/(?P<uuid>[0-9A-Za-z_\-]+)?/$', views.process_add, name='process_add'),
+    url(r'process/astrometry/(?P<file_id>[0-9]+)?/$', views.process_astrometry, name='process_astrometry'),
     url(r'^upload(?:/(?P<qquuid>\S+))?', views.UploadView.as_view(), name='upload'),
     url(r'^accounts/', include('registration.backends.default.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

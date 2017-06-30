@@ -56,7 +56,7 @@ ROOT_URLCONF = 'astro_analysis.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['analysis/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -82,6 +82,13 @@ DATABASES = {
     }
 }
 
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
@@ -127,11 +134,28 @@ STATICFILES_DIRS = (
 
 FILE_UPLOAD_TEMP_DIR = '/tmp'
 
-UPLOAD_DIRECTORY = os.path.join(BASE_DIR, 'temporary_uploads')
+UPLOAD_DIRECTORY = os.path.join(BASE_DIR, 'temporary/temporary_uploads')
 
-CHUNKS_DIRECTORY = os.path.join(BASE_DIR, 'temporary_chunks')
+CHUNKS_DIRECTORY = os.path.join(BASE_DIR, 'temporary/temporary_chunks')
 
 ACCOUNT_ACTIVATION_DAYS = 7
 
 DEFAULT_FROM_EMAIL = "wf44@kent.ac.uk"
 
+LOGIN_REDIRECT_URL = '/'
+
+ACTIVATION_REDIRECT_URL = '/'
+
+ASTROMETRY_WORKING_DIRECTORY = os.path.join(BASE_DIR, 'temporary', 'astrometry')
+
+PHOTOMETRY_WORKING_DIRECTORY = os.path.join(BASE_DIR, 'temporary', 'photometry')
+
+CALIBRATION_WORKING_DIRECTORY = os.path.join(BASE_DIR, 'temporary', 'calibration')
+
+TOOLS_CONFIGURATION_DIRECTORY = os.path.join(BASE_DIR, 'analysis', 'configs')
+
+FITS_DIRECTORY = os.path.join(BASE_DIR, 'data', 'fits')
+
+CATALOGUE_DIRECTORY = os.path.join(BASE_DIR, 'data', 'cat')
+
+CONFIGS_DIRECTORY = os.path.join(BASE_DIR, 'configs')

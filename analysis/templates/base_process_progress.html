@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1>Progress to the next analysis stage</h1>
+
+    <p>The process that you initiated has now finished.<br />
+        <a href="{% url next_stage file_id %}" class="btn">Progress to next stage</a></p>
+{% endblock %}
