@@ -5,20 +5,6 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class FITSMeta(models.Model):
-    """
-    Stores meta information relating to a FITS file such as name and location
-    """
-    fits_filename = models.CharField(max_length=255)
-    catalog_filename = models.CharField(max_length=255)
-    process_stage = models.IntegerField()
-    uploaded_by = models.ForeignKey(User)
-    upload_time = models.IntegerField()
-
-    class Meta:
-        db_table = "fits_meta"
-
-
 class FITSHeader(models.Model):
     """
     Stores the header information of a FITS file
@@ -133,12 +119,22 @@ class FITSHeader(models.Model):
 
 class FITSFile(models.Model):
     """
-    Linking table
-    Stores a reference to the metadata of a FITS file (such as location)
-    And stores a reference to the header of a FITS file
+    Stores a reference to the header of a FITS file, and some attributes
     """
-    meta = models.ForeignKey(FITSMeta)
+    STATUS_CHOICES = (
+        ('HEADER', 'Header check'),
+        ('ASTROMETRY', 'Astrometry'),
+        ('PHOTOMETRY', 'Photometry'),
+        ('CALIBRATION', 'Calibration'),
+        ('COMPLETE', 'Processing complete')
+    )
+
     header = models.ForeignKey(FITSHeader)
+    fits_filename = models.CharField(max_length=255)
+    catalog_filename = models.CharField(max_length=255)
+    process_status = models.CharField(choices=STATUS_CHOICES, max_length=255)
+    uploaded_by = models.ForeignKey(User)
+    upload_time = models.IntegerField()
 
     class Meta:
         db_table = "fits_files"

@@ -9,13 +9,13 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, ValidationError, PermissionDenied
 from django.http import Http404
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 
 from forms import UploadFileForm
 from models import *
-from utils import fits, upload, astrometry
+from utils import fits, upload, astrometry, photometry, calibration, general
 
 
 @login_required
@@ -38,24 +38,29 @@ def unprocessed_uploads(request):
     unprocessed = UnprocessedUpload.objects.filter(user=request.user)
     return render(request, "base_unprocessed.html", {'unprocessed': unprocessed})
 
+
 @login_required
-def process(request):
+def process(request, file_id):
     """
-    Redirect the user to the appropriate processing stage for their file
+    Let the user continue processing their file
     :param request:
     :return:
     """
-    current_stage = getattr(request.session, 'current_stage')
-    if current_stage is 1:
-        redirect('process_add', getattr(request.session, 'file_id'))
-    elif current_stage is 2:
-        redirect('process_astrometry', getattr(request.session, 'file_id'))
-    elif current_stage is 3:
-        redirect('process_photometry', getattr(request.session, 'file_id'))
-    elif current_stage is 4:
-        redirect('process_calibration', getattr(request.session, 'file_id'))
-    else:
-        redirect('home')
+
+
+def process_status(request, file_id):
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except ObjectDoesNotExist:
+        return general.make_response(status=404, content=json.dumps({
+            'error': True
+            }))
+
+    return general.make_response(status=200, content=json.dumps({
+        'filename': fits_file.fits_filename,
+        'current_stage': fits_file.process_status,
+        'error': False,
+    }))
 
 
 @login_required
@@ -69,20 +74,68 @@ def process_header(request, uuid):
     """
 
     if request.method == "POST":
-        # User wants to delete the file
         try:
             file = UnprocessedUpload.objects.get(uuid=uuid)
         except (ObjectDoesNotExist, ValidationError):
             raise Http404
 
-        # Don't let other users delete files they didn't upload!
-        if file.user == request.user:
-            file.delete()
-            upload.handle_deleted_file(str(uuid))
+        if request.POST.get('delete') == "true":
+            # Don't let other users delete files they didn't upload!
+            if file.user == request.user:
+                file.delete()
+                upload.handle_deleted_file(str(uuid))
 
-            return redirect('unprocessed_uploads')
+                return redirect('unprocessed_uploads')
+            else:
+                raise PermissionDenied
         else:
-            raise PermissionDenied
+            # Need to add the files to the database
+            # First lets check that the user has permission to work with this file
+            if not request.user == file.user:
+                raise PermissionDenied
+
+            inhdulist = fits.get_hdu_list(
+                os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename))
+
+            header = FITSHeader()
+
+            # Iterate through all the header values and add these to the database
+            for key, value in zip(inhdulist[0].header.keys(), inhdulist[0].header.values()):
+                # We have to replace the - in the keys becuase it's not supported by Python or the database.
+                # All keys are also lowercase in the model.
+                setattr(header, key.lower().replace("-", "_"), value)
+
+            header.save()
+
+            fits_file = FITSFile()
+
+            fits_file.header = header
+            fits_file.fits_filename = ''
+            fits_file.catalog_filename = ''
+            fits_file.uploaded_by = file.user
+            fits_file.upload_time = file.upload_time
+
+            fits_file.save()
+
+            # Make a new directory for the file and put it into this new directory.
+            os.mkdir(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
+            shutil.move(os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename),
+                        os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), file.filename))
+            upload.handle_deleted_file(str(file.uuid))
+
+            fits_file.fits_filename = file.filename
+
+            fits_file.save()
+
+            # Seeing as we don't need the reference to the unprocessed file any more, delete it.
+            file.delete()
+
+            # Set the current stage of the processing
+            fits_file.process_status = 'HEADER'
+
+            fits_file.save()
+
+            return render(request, "base_process_progress.html")
 
     try:
         file = UnprocessedUpload.objects.get(uuid=uuid)
@@ -103,74 +156,6 @@ def process_header(request, uuid):
 
 
 @login_required
-def process_add(request, uuid):
-    """
-    Add a file and its header information to the database, now we know it's valid
-    :param request:
-    :param uuid: The UUID of the temporary file
-    :return:
-    """
-
-    try:
-        unprocessed_file = UnprocessedUpload.objects.get(uuid=uuid)
-    except (ObjectDoesNotExist, ValidationError):
-        raise Http404
-
-    # First lets check that the user has permission to work with this file
-    if not request.user == unprocessed_file.user:
-        raise PermissionDenied
-
-    inhdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid), unprocessed_file.filename))
-
-    header = FITSHeader()
-
-    # Iterate through all the header values and add these to the database
-    for key, value in zip(inhdulist[0].header.keys(), inhdulist[0].header.values()):
-        # We have to replace the - in the keys becuase it's not supported by Python or the database.
-        # All keys are also lowercase in the model.
-        setattr(header, key.lower().replace("-", "_"), value)
-
-    header.save()
-
-    # Set up a meta object. We're just going to leave these values blank at the moment until we know the locations
-    meta = FITSMeta()
-
-    meta.fits_filename = ''
-    meta.catalog_filename = ''
-    meta.uploaded_by = unprocessed_file.user
-    meta.upload_time = unprocessed_file.upload_time
-    meta.process_stage = 2
-
-    meta.save()
-
-    fits_file = FITSFile()
-
-    fits_file.header = header
-    fits_file.meta = meta
-
-    fits_file.save()
-
-    # Make a new directory for the file and put it into this new directory.
-    os.mkdir(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
-    shutil.move(os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid), unprocessed_file.filename), os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), unprocessed_file.filename))
-    upload.handle_deleted_file(str(unprocessed_file.uuid))
-
-    meta.fits_filename = unprocessed_file.filename
-
-    meta.save()
-
-    # Seeing as we don't need the reference to the unprocessed file any more, delete it.
-    unprocessed_file.delete()
-
-    # Set the current stage of the processing
-    fits_file.meta.process_stage = 2
-
-    fits_file.meta.save()
-
-    return render(request, "base_process_progress.html", {'next_stage': 'process_astrometry', 'file_id': fits_file.id})
-
-
-@login_required
 def process_astrometry(request, file_id):
     """
     Run the astrometry process for a particular file based on its ID
@@ -183,30 +168,62 @@ def process_astrometry(request, file_id):
     except ObjectDoesNotExist:
         raise Http404
 
-    if fits_file.meta.process_stage > 2:
+    if fits_file.process_stage > 2:
         render(request, "base_process_already.html")
 
-    if request.user.id is not fits_file.meta.uploaded_by.id:
+    if request.user.id is not fits_file.uploaded_by.id:
         raise PermissionDenied
 
     # Run the astrometry process for the file
-    astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.meta.fits_filename), str(fits_file.id))
+    astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename), str(fits_file.id))
 
-    return render(request, "base_process_message.html")
+    return general.make_response(status=200, content=json.dumps(
+        {
+            'success': True
+        }
+    ))
 
 
 @login_required
-def process_photomertry(request, file_id):
+def process_photometry(request, file_id):
     """
     Run the photometry prpcess for a particular file based on its ID
     :param request:
     :param file_id: The ID of the file to process
     :return:
     """
-    if request.session['current_stage'] is not 3:
-        redirect('process')
 
-    request.session['current_stage'] = 4
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except ObjectDoesNotExist:
+        raise Http404
+
+    photometry.do_photometry(fits_file.fits_filename, fits_file.id)
+
+    fits_file.catalog_filename = fits_file.fits_filename + '.cat'
+
+    fits_file.save()
+
+    return general.make_response(status=200, content=json.dumps(
+        {
+            'success': True
+        }
+    ))
+
+
+def process_calibration(request, file_id):
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except ObjectDoesNotExist:
+        raise Http404
+
+    calibration.do_calibration(file_id)
+
+    return general.make_response(status=200, content=json.dumps(
+        {
+            'success': True
+        }
+    ))
 
 
 class UploadView(View):

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,7 +18,7 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="#">FITS Analysis</a>
+      <a class="navbar-brand" href="#">CAPS Analysis Service</a>
     </div>
 
     <!-- Collect the nav links, forms, and other content for toggling -->
@@ -43,7 +44,7 @@
     <br />
     <footer>
         <div class="well">
-            <p><a href="http://astro.kent.ac.uk/">Centre for Astrophysics and Planetary Science</a></p>
+            <div align="center"><a href="http://astro.kent.ac.uk/"><img src="{% static 'caps_logo.png' %}" alt="CAPS" height="100px"></a></div>
         </div>
     </footer>
 

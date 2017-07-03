@@ -6,9 +6,13 @@
 <h1>Start processing your uploaded files</h1>
 
 <ul>
+    {% if unprocessed|length > 0 %}
     {% for file in unprocessed %}
     <li><a href="{% url 'process_header' file.uuid %}">Check header on {{ file.filename }}</a></li>
     {% endfor %}
+    {% else %}
+    <li>You have no files left to process.</li>
+    {% endif %}
 </ul>
 
 {% endblock %}

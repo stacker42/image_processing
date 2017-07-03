@@ -25,8 +25,10 @@ urlpatterns = [
     url(r'^$', views.home, name="home"),
     url(r'^unprocessed_uploads/$', views.unprocessed_uploads, name="unprocessed_uploads"),
     url(r'^process/header/(?P<uuid>[0-9A-Za-z_\-]+)/$', views.process_header, name="process_header"),
-    url(r'process/add/(?P<uuid>[0-9A-Za-z_\-]+)?/$', views.process_add, name='process_add'),
     url(r'process/astrometry/(?P<file_id>[0-9]+)?/$', views.process_astrometry, name='process_astrometry'),
+    url(r'process/photometry/(?P<file_id>[0-9]+)?/$', views.process_photometry, name='process_photometry'),
+    url(r'process/calibration/(?P<file_id>[0-9]+)?/$', views.process_calibration, name='process_calibration'),
+    url(r'process/status/(?P<file_id>[0-9A-Za-z_\-]+)?/$', views.process_status, name='process_status'),
     url(r'^upload(?:/(?P<qquuid>\S+))?', views.UploadView.as_view(), name='upload'),
     url(r'^accounts/', include('registration.backends.default.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

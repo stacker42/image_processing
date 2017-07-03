@@ -83,12 +83,12 @@ DATABASES = {
 }
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+#    }
+#}
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
@@ -159,3 +159,7 @@ FITS_DIRECTORY = os.path.join(BASE_DIR, 'data', 'fits')
 CATALOGUE_DIRECTORY = os.path.join(BASE_DIR, 'data', 'cat')
 
 CONFIGS_DIRECTORY = os.path.join(BASE_DIR, 'configs')
+
+MASTER_CATALOGUE_FILE = os.path.join(BASE_DIR, 'configs', 'master.cat')
+
+PLOTS_DIRECTORY = os.path.join(BASE_DIR, 'data', 'plots')

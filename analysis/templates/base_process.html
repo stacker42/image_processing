@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1></h1>
+
+
+
+    <script>
+
+    function loadProcess() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                response = this.responseText;
+                console.log(response);
+
+            }
+        };
+        xhttp.open("GET", "{% url 'process_status' fits_file.id %}", true);
+        xhttp.send();
+
+
+    }
+
+    setInterval(loadProcess(), 10000); // Check for a status change every 10 seconds
+
+    </script>
+
+
+{% endblock %}
