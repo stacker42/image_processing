@@ -40,15 +40,19 @@ def unprocessed_uploads(request):
 
 
 @login_required
-def process(request, file_id):
+def process(request):
     """
     Let the user continue processing their file
     :param request:
     :return:
     """
+    unprocessed = UnprocessedUpload.objects.filter(user=request.user)
+    files = FITSFile.objects.filter(uploaded_by=request.user).exclude(process_status='COMPLETE')
+
+    return render(request, "base_process.html", {'unprocessed': unprocessed, 'files': files})
 
 
-def process_status(request, file_id):
+def process_status(request, file_id=0):
     try:
         fits_file = FITSFile.objects.get(pk=file_id)
     except ObjectDoesNotExist:

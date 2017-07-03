@@ -2,28 +2,39 @@
 
 {% block content %}
 
-    <h1></h1>
+    <h1>Check headers</h1>
+
+
+    <h1>Processing files</h1>
+
 
 
 
     <script>
 
-    function loadProcess() {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                response = this.responseText;
-                console.log(response);
+    function getCurrentStatus(file_id) {
+        var theurl = "{% url 'process_status' 0 %}".replace("0", file_id);
+        $.ajax({
 
-            }
-        };
-        xhttp.open("GET", "{% url 'process_status' fits_file.id %}", true);
-        xhttp.send();
+            // The URL for the request
+            url: theurl,
 
+
+            // Whether this is a POST or GET request
+            type: "GET",
+
+            // The type of data we expect back
+            dataType : "json",
+        })
+        // Code to run if the request succeeds (is done);
+        // The response is passed to the function
+        .done(function( json ) {
+            return json;
+        })
 
     }
 
-    setInterval(loadProcess(), 10000); // Check for a status change every 10 seconds
+    console.log(getCurrentStatus(11));
 
     </script>
 
