@@ -37,7 +37,12 @@ def do_astrometry(path, file_id):
     """
     WORKING_DIRECTORY = j(settings.ASTROMETRY_WORKING_DIRECTORY, file_id)
 
-    os.mkdir(WORKING_DIRECTORY)
+    if not os.path.exists(WORKING_DIRECTORY):
+        os.mkdir(WORKING_DIRECTORY)
+
+    os.chdir(WORKING_DIRECTORY)
+
+    os.putenv('PLPLOT_LIB', '/usr/share/plplot5.10.0/')
 
     # open the file
     inhdulist = fits.get_hdu_list(path)
@@ -166,5 +171,8 @@ def do_astrometry(path, file_id):
     pyfits.writeto(j(WORKING_DIRECTORY, "astro1.fits"), inhdulist[0].data, inhdulist[0].header)
 
     shutil.move(j(WORKING_DIRECTORY, "astro1.fits"), path)
+
+    os.chdir(settings.BASE_DIR)
+
     # Cleanup files we made earlier
-    shutil.rmtree(WORKING_DIRECTORY)
+    #shutil.rmtree(WORKING_DIRECTORY)

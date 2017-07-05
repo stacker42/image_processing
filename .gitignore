@@ -5,6 +5,8 @@ temporary_uploads/
 *.sqlite3
 *.db
 data/
+temporary/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

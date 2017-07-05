@@ -1,40 +1,62 @@
 {% extends 'base.html' %}
 
+{% block title %}Process Files{% endblock %}
+
 {% block content %}
 
     <h1>Check headers</h1>
 
+    {% if unprocessed|length > 0 %}
+        <ul>
+        {% for u in unprocessed %}
+            <li>{{ u.filename }} <a class="btn btn-primary" href="{% url 'process_header' u.uuid %}">Check header</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>You currently have no files that need to have their headers checked.</p>
+    {% endif %}
 
     <h1>Processing files</h1>
+
+    {% if files|length > 0 %}
+        <ul>
+        {% for f in files %}
+            <li>{{ f.fits_filename }}
+                <a class="btn btn-primary" {% if f.process_status != 'HEADER' %} disabled="true" {% else %} href="{% url 'process_astrometry' %}?file_id={{ f.id }}"{% endif %} onclick="loading()">Astrometry</a>
+                <a class="btn btn-primary" {% if f.process_status != 'ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_photometry' %}?file_id={{ f.id }}"{% endif %} onclick="loading()">Photometry</a>
+                <a class="btn btn-primary" {% if f.process_status != 'PHOTOMETRY' %} disabled="true" {% else %} href="{% url 'process_calibration' %}?file_id={{ f.id }}"{% endif %} onclick="loading()">Calibration</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>You currently have no files that need furthur processing.</p>
+    {% endif %}
 
 
 
 
     <script>
 
-    function getCurrentStatus(file_id) {
-        var theurl = "{% url 'process_status' 0 %}".replace("0", file_id);
-        $.ajax({
 
-            // The URL for the request
-            url: theurl,
-
-
-            // Whether this is a POST or GET request
-            type: "GET",
-
-            // The type of data we expect back
-            dataType : "json",
-        })
-        // Code to run if the request succeeds (is done);
-        // The response is passed to the function
-        .done(function( json ) {
-            return json;
-        })
-
+    function loading() {
+        // Disable all buttons when we're running a request for another file
+        $('.btn').attr('disabled', true);
+        swal('Warning...', 'Your request is currently being processed', 'warning');
     }
 
-    console.log(getCurrentStatus(11));
+    function astrometry(filename, file_id) {
+    swal.queue([{
+        title: 'Astrometry',
+        confirmButtonText: 'Run astrometry for ' + filename,
+        text:
+            'Astrometry will not complete if it has already been done for this file.',
+        showLoaderOnConfirm: true,
+        preConfirm: function () {
+        return new Promise(function (resolve) {
+            swal.insertQueueStep('test');
+        })
+        }
+    }])
+    }
 
     </script>
 

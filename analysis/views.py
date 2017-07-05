@@ -18,7 +18,6 @@ from models import *
 from utils import fits, upload, astrometry, photometry, calibration, general
 
 
-@login_required
 def home(request):
     """
     Let the user upload files
@@ -28,7 +27,6 @@ def home(request):
     return render(request, "base_upload.html")
 
 
-@login_required
 def unprocessed_uploads(request):
     """
     Let the user check their list of unprocessed uploads
@@ -39,7 +37,6 @@ def unprocessed_uploads(request):
     return render(request, "base_unprocessed.html", {'unprocessed': unprocessed})
 
 
-@login_required
 def process(request):
     """
     Let the user continue processing their file
@@ -52,7 +49,9 @@ def process(request):
     return render(request, "base_process.html", {'unprocessed': unprocessed, 'files': files})
 
 
-def process_status(request, file_id=0):
+def process_status(request):
+    file_id = request.GET.get('file_id')
+
     try:
         fits_file = FITSFile.objects.get(pk=file_id)
     except ObjectDoesNotExist:
@@ -67,7 +66,6 @@ def process_status(request, file_id=0):
     }))
 
 
-@login_required
 def process_header(request, uuid):
     """
     Lets the user check the header information in a given file, based on UUID
@@ -139,7 +137,7 @@ def process_header(request, uuid):
 
             fits_file.save()
 
-            return render(request, "base_process_progress.html")
+            return redirect('process')
 
     try:
         file = UnprocessedUpload.objects.get(uuid=uuid)
@@ -159,21 +157,23 @@ def process_header(request, uuid):
     return render(request, "base_process_header.html", {'header': header, 'uuid': str(file.uuid)})
 
 
-@login_required
-def process_astrometry(request, file_id):
+def process_astrometry(request):
     """
     Run the astrometry process for a particular file based on its ID
     :param request:
     :param file_id: The ID of the file to process
     :return:
     """
+
+    file_id = request.GET.get('file_id')
+
     try:
         fits_file = FITSFile.objects.get(pk=file_id)
     except ObjectDoesNotExist:
         raise Http404
 
-    if fits_file.process_stage > 2:
-        render(request, "base_process_already.html")
+    if fits_file.process_status != 'HEADER':
+        return render(request, "base_process_already.html")
 
     if request.user.id is not fits_file.uploaded_by.id:
         raise PermissionDenied
@@ -181,15 +181,14 @@ def process_astrometry(request, file_id):
     # Run the astrometry process for the file
     astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename), str(fits_file.id))
 
-    return general.make_response(status=200, content=json.dumps(
-        {
-            'success': True
-        }
-    ))
+    fits_file.process_status = 'ASTROMETRY'
+
+    fits_file.save()
+
+    return redirect('process')
 
 
-@login_required
-def process_photometry(request, file_id):
+def process_photometry(request):
     """
     Run the photometry prpcess for a particular file based on its ID
     :param request:
@@ -197,37 +196,48 @@ def process_photometry(request, file_id):
     :return:
     """
 
+    file_id = request.GET.get('file_id')
+
     try:
         fits_file = FITSFile.objects.get(pk=file_id)
     except ObjectDoesNotExist:
         raise Http404
+
+    if fits_file.process_status != 'ASTROMETRY':
+        return render(request, "base_process_already.html")
 
     photometry.do_photometry(fits_file.fits_filename, fits_file.id)
 
     fits_file.catalog_filename = fits_file.fits_filename + '.cat'
 
+    fits_file.process_status = 'PHOTOMETRY'
+
     fits_file.save()
 
-    return general.make_response(status=200, content=json.dumps(
-        {
-            'success': True
-        }
-    ))
+    return redirect('process')
 
 
-def process_calibration(request, file_id):
+def process_calibration(request):
+
+    file_id = request.GET.get('file_id')
+
     try:
         fits_file = FITSFile.objects.get(pk=file_id)
     except ObjectDoesNotExist:
         raise Http404
 
+    if fits_file.process_status != 'PHOTOMETRY':
+        return render(request, "base_process_already.html")
+
     calibration.do_calibration(file_id)
 
-    return general.make_response(status=200, content=json.dumps(
-        {
-            'success': True
-        }
-    ))
+    #fits_file.process_status = 'COMPLETE'
+
+    #fits_file.save()
+
+    #return redirect('process')
+
+    return HttpResponse('done')
 
 
 class UploadView(View):

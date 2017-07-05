@@ -160,6 +160,6 @@ CATALOGUE_DIRECTORY = os.path.join(BASE_DIR, 'data', 'cat')
 
 CONFIGS_DIRECTORY = os.path.join(BASE_DIR, 'configs')
 
-MASTER_CATALOGUE_FILE = os.path.join(BASE_DIR, 'configs', 'master.cat')
+MASTER_CATALOGUE_FILE = os.path.join(BASE_DIR, 'configs', 'master2.cat')
 
 PLOTS_DIRECTORY = os.path.join(BASE_DIR, 'data', 'plots')

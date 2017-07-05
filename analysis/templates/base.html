@@ -1,16 +1,24 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>astroweb</title>
+    <title>{% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-     <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.5/sweetalert2.min.js" integrity="sha256-xofl41Tt0WRg2Q0LrntvSB6qv1Mzz/ZLvSyi+O08d1g=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.5/sweetalert2.min.css" integrity="sha256-fmdDIg1KI3wbdH0gfFQGXexodQ3SQzBTHDGicLAgje8=" crossorigin="anonymous" />
+
+    <style>
+        body {
+            background-color: #eeeeee;
+        }
+    </style>
+
 </head>
 <body>
 
-<div class="navbar navbar-default">
+<div class="navbar navbar-inverse bg-inverse">
       <div class="container">
     <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
@@ -30,7 +38,7 @@
             <li><a href="{% url 'auth_login' %}">Login</a></li>
           {% else %}
               <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'unprocessed_uploads' %}">Unprocessed uploads</a></li>
+            <li><a href="{% url 'process' %}">Process files</a></li>
             <li><a href="{% url 'auth_logout' %}">Logout</a></li>
           {% endif %}
       </ul>
@@ -42,12 +50,11 @@
     {% block content %}
     {% endblock %}
 
+    {% load staticfiles %}
+
     <br />
     <br />
     <footer>
-        <div class="well">
-            <div align="center"><a href="http://astro.kent.ac.uk/"><img src="{% static 'caps_logo.png' %}" alt="CAPS" height="100px"></a></div>
-        </div>
     </footer>
 
 </div>
