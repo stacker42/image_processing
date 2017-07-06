@@ -35,11 +35,12 @@
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
           {% if not user.is_authenticated %}
-            <li><a href="{% url 'auth_login' %}">Login</a></li>
+              <li><a href="{% url 'auth_login' %}">Login</a></li>
           {% else %}
               <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'process' %}">Process files</a></li>
-            <li><a href="{% url 'auth_logout' %}">Logout</a></li>
+              <li><a href="{% url 'process' %}">Process files</a></li>
+              <li><a href="{% url 'add_object' %}">Add new target</a></li>
+              <li><a href="{% url 'auth_logout' %}">Logout</a></li>
           {% endif %}
       </ul>
     </div><!-- /.navbar-collapse -->
@@ -55,6 +56,10 @@
     <br />
     <br />
     <footer>
+        <hr>
+        <div align="center">
+            <p>CAPS Analysis Service <br />University of Kent</p>
+        </div>
     </footer>
 
 </div>

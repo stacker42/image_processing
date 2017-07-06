@@ -13,7 +13,7 @@ from django.shortcuts import render, redirect, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 
-from forms import UploadFileForm
+from forms import UploadFileForm, ObjectForm, ObservationForm
 from models import *
 from utils import fits, upload, astrometry, photometry, calibration, general
 
@@ -150,11 +150,48 @@ def process_header(request, uuid):
 
     header = fits.get_header(os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename))
 
-    # Set the users current stage in processing their file
-    request.session['current_stage'] = 1
-    request.session['file_id'] = str(file.uuid)
-
     return render(request, "base_process_header.html", {'header': header, 'uuid': str(file.uuid)})
+
+
+def process_observation(request):
+    """
+    Let the user enter the details of their observation
+    :param request:
+    :return:
+    """
+    file_id = request.GET.get('file_id')
+
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except ObjectDoesNotExist:
+        raise Http404
+
+    if fits_file.uploaded_by != request.user:
+        raise PermissionDenied
+
+    if fits_file.process_status != 'HEADER':
+        return render(request, "base_process_already.html")
+
+    if request.method == "POST":
+        form = ObservationForm(request.POST)
+        if form.is_valid():
+            obs = form.save(commit=False)
+            obs.user = request.user
+            obs.fits = fits_file
+            obs.time = fits_file.header.date_obs
+            obs.filter = fits_file.header.filter
+            obs.save()
+
+            fits_file.process_status = 'OBSERVATION'
+            fits_file.save()
+
+            return redirect('process')
+        else:
+            return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
+    else:
+        form = ObservationForm()
+
+        return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
 
 
 def process_astrometry(request):
@@ -172,7 +209,7 @@ def process_astrometry(request):
     except ObjectDoesNotExist:
         raise Http404
 
-    if fits_file.process_status != 'HEADER':
+    if fits_file.process_status != 'OBSERVATION':
         return render(request, "base_process_already.html")
 
     if request.user.id is not fits_file.uploaded_by.id:
@@ -208,7 +245,7 @@ def process_photometry(request):
 
     photometry.do_photometry(fits_file.fits_filename, fits_file.id)
 
-    fits_file.catalog_filename = fits_file.fits_filename + '.cat'
+    fits_file.catalogue_filename = fits_file.fits_filename + '.cat'
 
     fits_file.process_status = 'PHOTOMETRY'
 
@@ -238,6 +275,30 @@ def process_calibration(request):
     #return redirect('process')
 
     return HttpResponse('done')
+
+
+def add_object(request):
+
+    if request.method == "POST":
+        form = ObjectForm(request.POST)
+        # Check the user has specified a catalog file and the rest of the form is valid
+        if ('catfile' in request.FILES) and (form.is_valid()):
+            cat_file = request.FILES.get('catfile')
+            if not os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']))):
+                path = os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']) + '.cat')
+                with open(path, 'w') as f:
+                    f.write(cat_file.read())
+                    f.close()
+                form.save()
+                return HttpResponse('yep')
+            else:
+                return render(request, "base_add_object.html", {'form': form})
+        else:
+            return render(request, "base_add_object.html", {'form': form})
+    else:
+        form = ObjectForm()
+
+        return render(request, "base_add_object.html", {'form': form})
 
 
 class UploadView(View):

@@ -142,17 +142,17 @@
                  */
                 onAllComplete: function(succeeded, failed) {
                     // Get all the attributes of uploads that have been successful. This is needed to get their names.
-                    uploads = manualUploader.getUploads({status: qq.status.UPLOAD_SUCCESSFUL})
-                    completedUploadArea = document.getElementById('uploaded-files')
+                    uploads = manualUploader.getUploads({status: qq.status.UPLOAD_SUCCESSFUL});
+                    completedUploadArea = document.getElementById('uploaded-files');
                     for(f in succeeded) {
-                        node = document.createElement("p")
-                        node.appendChild(document.createTextNode(uploads[f].name + " successfully uploaded"))
+                        node = document.createElement("p");
+                        node.appendChild(document.createTextNode(uploads[f].name + " successfully uploaded"));
                         completedUploadArea.appendChild(node)
                         //alert(uploads[f].uuid + " " + uploads[f].name)
                     }
-                    node = document.createElement("a")
-                    node.href = "{% url 'unprocessed_uploads' %}"
-                    node.appendChild(document.createTextNode("Process my uploads"))
+                    node = document.createElement("a");
+                    node.href = "{% url 'process' %}";
+                    node.appendChild(document.createTextNode("Process my uploads"));
                     completedUploadArea.appendChild(node)
                 }
             }

@@ -15,38 +15,38 @@ class FITSHeader(models.Model):
     naxis1 = models.IntegerField(blank=True, null=True)
     naxis2 = models.IntegerField(blank=True, null=True)
     date_obs = models.CharField(max_length=255, blank=True, null=True)
-    exptime = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    exposure = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    set_temp = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    ccd_temp = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    xpixsz = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    ypixsz = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    xbinning = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    ybinning = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
+    exptime = models.FloatField(blank=True, null=True)
+    exposure = models.FloatField(blank=True, null=True)
+    set_temp = models.FloatField(blank=True, null=True)
+    ccd_temp = models.FloatField(blank=True, null=True)
+    xpixsz = models.FloatField(blank=True, null=True)
+    ypixsz = models.FloatField(blank=True, null=True)
+    xbinning = models.FloatField(blank=True, null=True)
+    ybinning = models.FloatField(blank=True, null=True)
     xorgsubf = models.IntegerField(blank=True, null=True)
     yorgsubf = models.IntegerField(blank=True, null=True)
     filter = models.CharField(max_length=255, blank=True, null=True)
     imagetyp = models.CharField(max_length=255, blank=True, null=True)
-    focallen = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    aptdia = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    aptarea = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
+    focallen = models.FloatField(blank=True, null=True)
+    aptdia = models.FloatField(blank=True, null=True)
+    aptarea = models.FloatField(blank=True, null=True)
     swcreate = models.CharField(max_length=255, blank=True, null=True)
     swserial = models.CharField(max_length=255, blank=True, null=True)
     focuspos = models.IntegerField(blank=True, null=True)
-    focussz = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    focustem = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
+    focussz = models.FloatField(blank=True, null=True)
+    focustem = models.FloatField(blank=True, null=True)
     object = models.CharField(max_length=255, blank=True, null=True)
     objctra = models.CharField(max_length=255, blank=True, null=True)
     objctdec = models.CharField(max_length=255, blank=True, null=True)
-    objctalt = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    objctaz = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    objctha = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
+    objctalt = models.FloatField(blank=True, null=True)
+    objctaz = models.FloatField(blank=True, null=True)
+    objctha = models.FloatField(blank=True, null=True)
     pierside = models.CharField(max_length=255, blank=True, null=True)
     sitelat = models.CharField(max_length=255, blank=True, null=True)
     sitelong = models.CharField(max_length=255, blank=True, null=True)
-    jd = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    jd_helio = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    airmass = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
+    jd = models.FloatField(blank=True, null=True)
+    jd_helio = models.FloatField(blank=True, null=True)
+    airmass = models.FloatField(blank=True, null=True)
     telescop = models.CharField(max_length=255, blank=True, null=True)
     instrume = models.CharField(max_length=255, blank=True, null=True)
     observer = models.CharField(max_length=255, blank=True, null=True)
@@ -60,14 +60,14 @@ class FITSHeader(models.Model):
     ctype2 = models.CharField(max_length=255, blank=True, null=True)
     crpix1 = models.IntegerField(blank=True, null=True)
     crpix2 = models.IntegerField(blank=True, null=True)
-    crval1 = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    crval2 = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    cdelt1 = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    cdelt2 = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    cd1_1 = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    cd1_2 = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    cd2_1 = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    cd2_2 = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
+    crval1 = models.FloatField(blank=True, null=True)
+    crval2 = models.FloatField(blank=True, null=True)
+    cdelt1 = models.FloatField(blank=True, null=True)
+    cdelt2 = models.FloatField(blank=True, null=True)
+    cd1_1 = models.FloatField(blank=True, null=True)
+    cd1_2 = models.FloatField(blank=True, null=True)
+    cd2_1 = models.FloatField(blank=True, null=True)
+    cd2_2 = models.FloatField(blank=True, null=True)
     history = models.CharField(max_length=1000, blank=True, null=True)
     comment = models.CharField(max_length=1000, blank=True, null=True)
     equinox = models.CharField(max_length=255, blank=True, null=True)
@@ -109,12 +109,29 @@ class FITSHeader(models.Model):
     ast_cat = models.CharField(max_length=255, blank=True, null=True)
     ast_band = models.CharField(max_length=255, blank=True, null=True)
     n_stack = models.IntegerField(blank=True, null=True)
-    exp_tot = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-    jd_ave = models.DecimalField(max_digits=36, decimal_places=18, blank=True, null=True)
-
+    exp_tot = models.FloatField(blank=True, null=True)
+    jd_ave = models.FloatField(blank=True, null=True)
 
     class Meta:
         db_table = "fits_header"
+
+
+class Object(models.Model):
+    """
+    Represents an object that can be observed
+    """
+    number = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255)
+    ra = models.CharField(max_length=255)
+    dec = models.CharField(max_length=255)
+    max_use = models.FloatField()  # used in calibration
+    cal_offset = models.FloatField()  # used in calibration
+
+    class Meta:
+        db_table = "objects"
+
+    def __str__(self):
+        return '[' + str(self.number) + '] ' + self.name
 
 
 class FITSFile(models.Model):
@@ -123,6 +140,7 @@ class FITSFile(models.Model):
     """
     STATUS_CHOICES = (
         ('HEADER', 'Header check'),
+        ('OBSERVATION', 'Add observation details'),
         ('ASTROMETRY', 'Astrometry'),
         ('PHOTOMETRY', 'Photometry'),
         ('CALIBRATION', 'Calibration'),
@@ -131,7 +149,7 @@ class FITSFile(models.Model):
 
     header = models.ForeignKey(FITSHeader)
     fits_filename = models.CharField(max_length=255)
-    catalog_filename = models.CharField(max_length=255)
+    catalogue_filename = models.CharField(max_length=255)
     process_status = models.CharField(choices=STATUS_CHOICES, max_length=255)
     uploaded_by = models.ForeignKey(User)
     upload_time = models.IntegerField()
@@ -158,10 +176,11 @@ class Observation(models.Model):
     """
     Stores all the information about a specific observation
     """
-    time = models.IntegerField()
+    time = models.DateTimeField()
     user = models.ForeignKey(User)
     filter = models.CharField(max_length=255)
     fits = models.ForeignKey(FITSFile)
+    target = models.ForeignKey(Object)
 
     class Meta:
         db_table = "observations"
@@ -171,18 +190,16 @@ class Photometry(models.Model):
     """
     Stores the photometry information for a specific object
     """
-    observation = models.ForeignKey(User)
-    calibrated_magnitude = models.DecimalField(decimal_places=10, max_digits=20)
-    magnitude_rms_error = models.DecimalField(decimal_places=10, max_digits=20)
-    x = models.DecimalField(decimal_places=10, max_digits=20)
-    y = models.DecimalField(decimal_places=10, max_digits=20)
-    alpha_j2000 = models.DecimalField(decimal_places=10, max_digits=20)
-    delta_j2000 = models.DecimalField(decimal_places=10, max_digits=20)
-    fwhm_world = models.DecimalField(decimal_places=10, max_digits=20)
+    observation = models.ForeignKey(Observation)
+    calibrated_magnitude = models.FloatField()
+    magnitude_rms_error = models.FloatField()
+    x = models.FloatField()
+    y = models.FloatField()
+    alpha_j2000 = models.FloatField()
+    delta_j2000 = models.FloatField()
+    fwhm_world = models.FloatField()
     flags = models.CharField(max_length=10)
+    magnitude = models.FloatField()
 
     class Meta:
         db_table = "photometry"
-
-
-

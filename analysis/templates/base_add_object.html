@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Add an object{% endblock %}
+
+{% block content %}
+
+                    {% if form.errors %}
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <p class="error">
+                                <strong>{{ error|escape }}</strong>
+                            </p>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <p class="error">
+                            <strong>{{ error|escape }}</strong>
+                        </p>
+                    {% endfor %}
+                {% endif %}
+
+                {% if error %}
+                    <p class="error">{{ error }}</p>
+                {% endif %}
+
+  <form method="POST" action="." enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+      <label for="file">Choose a master catalog file</label>
+      <input type="file" class="btn btn-file" name="catfile">
+
+      <br />
+    <input type="submit" value="Add object to database" class="btn btn-success">
+
+  </form>
+
+{% endblock %}

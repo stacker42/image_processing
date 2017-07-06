@@ -22,15 +22,32 @@
         <ul>
         {% for f in files %}
             <li>{{ f.fits_filename }}
-                <a class="btn btn-primary" {% if f.process_status != 'HEADER' %} disabled="true" {% else %} href="{% url 'process_astrometry' %}?file_id={{ f.id }}"{% endif %} onclick="loading()">Astrometry</a>
-                <a class="btn btn-primary" {% if f.process_status != 'ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_photometry' %}?file_id={{ f.id }}"{% endif %} onclick="loading()">Photometry</a>
-                <a class="btn btn-primary" {% if f.process_status != 'PHOTOMETRY' %} disabled="true" {% else %} href="{% url 'process_calibration' %}?file_id={{ f.id }}"{% endif %} onclick="loading()">Calibration</a></li>
+                <a class="btn btn-primary" {% if f.process_status != 'HEADER' %} disabled="true" {% else %} href="{% url 'process_observation' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Observation target</a>
+                <a class="btn btn-primary" {% if f.process_status != 'OBSERVATION' %} disabled="true" {% else %} href="{% url 'process_astrometry' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Astrometry</a>
+                <a class="btn btn-primary" {% if f.process_status != 'ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_photometry' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Photometry</a>
+                <a class="btn btn-primary" {% if f.process_status != 'PHOTOMETRY' %} disabled="true" {% else %} href="{% url 'process_calibration' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Calibration</a></li>
         {% endfor %}
         </ul>
     {% else %}
         <p>You currently have no files that need furthur processing.</p>
     {% endif %}
 
+
+    <div class="modal fade" id="processing" role="dialog" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg">
+
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title">Your request is currently being processed...</h4>
+        </div>
+        <div class="modal-body">
+          <p>Please do not close your browser during the time it takes for your request to be completed.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
 
 
@@ -39,23 +56,7 @@
 
     function loading() {
         // Disable all buttons when we're running a request for another file
-        $('.btn').attr('disabled', true);
-        swal('Warning...', 'Your request is currently being processed', 'warning');
-    }
-
-    function astrometry(filename, file_id) {
-    swal.queue([{
-        title: 'Astrometry',
-        confirmButtonText: 'Run astrometry for ' + filename,
-        text:
-            'Astrometry will not complete if it has already been done for this file.',
-        showLoaderOnConfirm: true,
-        preConfirm: function () {
-        return new Promise(function (resolve) {
-            swal.insertQueueStep('test');
-        })
-        }
-    }])
+        $('#processing').modal('show')
     }
 
     </script>
