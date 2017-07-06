@@ -7,9 +7,10 @@ import shutil
 import os
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 from django.core.exceptions import ObjectDoesNotExist, ValidationError, PermissionDenied
 from django.http import Http404
-from django.shortcuts import render, redirect, HttpResponse
+from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 
@@ -18,6 +19,7 @@ from models import *
 from utils import fits, upload, astrometry, photometry, calibration, general
 
 
+@login_required
 def home(request):
     """
     Let the user upload files
@@ -27,19 +29,10 @@ def home(request):
     return render(request, "base_upload.html")
 
 
-def unprocessed_uploads(request):
-    """
-    Let the user check their list of unprocessed uploads
-    :param request:
-    :return:
-    """
-    unprocessed = UnprocessedUpload.objects.filter(user=request.user)
-    return render(request, "base_unprocessed.html", {'unprocessed': unprocessed})
-
-
+@login_required
 def process(request):
     """
-    Let the user continue processing their file
+    Let the user continue processing their files
     :param request:
     :return:
     """
@@ -49,23 +42,7 @@ def process(request):
     return render(request, "base_process.html", {'unprocessed': unprocessed, 'files': files})
 
 
-def process_status(request):
-    file_id = request.GET.get('file_id')
-
-    try:
-        fits_file = FITSFile.objects.get(pk=file_id)
-    except ObjectDoesNotExist:
-        return general.make_response(status=404, content=json.dumps({
-            'error': True
-            }))
-
-    return general.make_response(status=200, content=json.dumps({
-        'filename': fits_file.fits_filename,
-        'current_stage': fits_file.process_status,
-        'error': False,
-    }))
-
-
+@login_required
 def process_header(request, uuid):
     """
     Lets the user check the header information in a given file, based on UUID
@@ -139,10 +116,7 @@ def process_header(request, uuid):
 
             return redirect('process')
 
-    try:
-        file = UnprocessedUpload.objects.get(uuid=uuid)
-    except (ObjectDoesNotExist, ValidationError):
-        raise Http404
+    file = get_object_or_404(UnprocessedUpload, uuid=uuid)
 
     # Only users of the file can process the header
     if file.user != request.user:
@@ -153,6 +127,7 @@ def process_header(request, uuid):
     return render(request, "base_process_header.html", {'header': header, 'uuid': str(file.uuid)})
 
 
+@login_required
 def process_observation(request):
     """
     Let the user enter the details of their observation
@@ -161,10 +136,7 @@ def process_observation(request):
     """
     file_id = request.GET.get('file_id')
 
-    try:
-        fits_file = FITSFile.objects.get(pk=file_id)
-    except ObjectDoesNotExist:
-        raise Http404
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
 
     if fits_file.uploaded_by != request.user:
         raise PermissionDenied
@@ -194,6 +166,7 @@ def process_observation(request):
         return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
 
 
+@login_required
 def process_astrometry(request):
     """
     Run the astrometry process for a particular file based on its ID
@@ -204,10 +177,7 @@ def process_astrometry(request):
 
     file_id = request.GET.get('file_id')
 
-    try:
-        fits_file = FITSFile.objects.get(pk=file_id)
-    except ObjectDoesNotExist:
-        raise Http404
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
 
     if fits_file.process_status != 'OBSERVATION':
         return render(request, "base_process_already.html")
@@ -225,6 +195,7 @@ def process_astrometry(request):
     return redirect('process')
 
 
+@login_required
 def process_photometry(request):
     """
     Run the photometry prpcess for a particular file based on its ID
@@ -235,10 +206,7 @@ def process_photometry(request):
 
     file_id = request.GET.get('file_id')
 
-    try:
-        fits_file = FITSFile.objects.get(pk=file_id)
-    except ObjectDoesNotExist:
-        raise Http404
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
 
     if fits_file.process_status != 'ASTROMETRY':
         return render(request, "base_process_already.html")
@@ -254,14 +222,12 @@ def process_photometry(request):
     return redirect('process')
 
 
+@login_required
 def process_calibration(request):
 
     file_id = request.GET.get('file_id')
 
-    try:
-        fits_file = FITSFile.objects.get(pk=file_id)
-    except ObjectDoesNotExist:
-        raise Http404
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
 
     if fits_file.process_status != 'PHOTOMETRY':
         return render(request, "base_process_already.html")
@@ -277,6 +243,7 @@ def process_calibration(request):
     return HttpResponse('done')
 
 
+@login_required
 def add_object(request):
 
     if request.method == "POST":
@@ -314,6 +281,7 @@ class UploadView(View):
     def dispatch(self, *args, **kwargs):
         return super(UploadView, self).dispatch(*args, **kwargs)
 
+    @method_decorator(login_required)
     def post(self, request, *args, **kwargs):
         """A POST request. Validate the form and then handle the upload
         based ont the POSTed data. Does not handle extra parameters yet.
@@ -334,25 +302,4 @@ class UploadView(View):
                     'success': False,
                     'error': '%s' % repr(form.errors)
                 }))
-
-    def delete(self, request, *args, **kwargs):
-        """A DELETE request. If found, deletes a file with the corresponding
-        UUID from the server's filesystem.
-        """
-        qquuid = kwargs.get('qquuid', '')
-        if qquuid:
-            try:
-                upload.handle_deleted_file(qquuid)
-                return upload.make_response(content=json.dumps({'success': True}))
-            except Exception, e:
-                return upload.make_response(status=400,
-                                            content=json.dumps({
-                        'success': False,
-                        'error': '%s' % repr(e)
-                    }))
-        return upload.make_response(status=404,
-                                    content=json.dumps({
-                'success': False,
-                'error': 'File not present'
-            }))
 
