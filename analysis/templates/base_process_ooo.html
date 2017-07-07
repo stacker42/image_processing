@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block title %}Processing out of order{% endblock %}
+
+{% block content %}
+
+    <h1>Error</h1>
+    <p>You've already completed this processing stage for this file - or still need to complete other stages before starting this one. <a href="{% url 'process' %}">Click here</a> to get back on track.</p>
+
+{% endblock %}

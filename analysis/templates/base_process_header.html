@@ -4,9 +4,18 @@
 {% block title %}Header Check{% endblock %}
 
 {% block content %}
+
     <h1>Header Check</h1>
+    {% if not missing_key %}
     <p>Please check the header for the file you are about to process looks correct.<br />
     If you are not sure, please choose 'abort' and the file will be deleted.</p>
+    {% else %}
+    <p class="warning">The header you have supplied is missing one or more of the following required cards, and therefore
+        cannot be added.<br />
+        {% for element in required %}
+            {{ element }}
+        {% endfor %}
+    {% endif %}
 
     <pre>
     {{ header }}
@@ -18,11 +27,13 @@
         <input type="submit" class="btn btn-danger" value="This header is NOT correct, delete this file">
     </form>
 
+    {% if not missing_key %}
     <form method="POST" action="{% url 'process_header' uuid %}" enctype="multipart/form-data">
         {% csrf_token %}
 
         <input name="delete" type="hidden" value="false">
         <input type="submit" class="btn btn-success" value="This header is correct, proceed to add it to the database">
     </form>
+    {% endif %}
 
 {% endblock %}

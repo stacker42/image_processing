@@ -6,7 +6,7 @@ import shutil
 
 import os
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ObjectDoesNotExist, ValidationError, PermissionDenied
 from django.http import Http404
@@ -52,6 +52,10 @@ def process_header(request, uuid):
     :return:
     """
 
+    REQUIRED_HEADER_KEYS = [
+        'NAXIS1', 'NAXIS2', 'OBJCTRA', 'OBJCTDEC', 'EXPTIME', 'FILTER', 'IMAGETYP', 'JD', 'PIERSIDE', 'DATE-OBS'
+    ]
+
     if request.method == "POST":
         try:
             file = UnprocessedUpload.objects.get(uuid=uuid)
@@ -64,7 +68,7 @@ def process_header(request, uuid):
                 file.delete()
                 upload.handle_deleted_file(str(uuid))
 
-                return redirect('unprocessed_uploads')
+                return redirect('home')
             else:
                 raise PermissionDenied
         else:
@@ -76,11 +80,17 @@ def process_header(request, uuid):
             inhdulist = fits.get_hdu_list(
                 os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename))
 
+            if not set(REQUIRED_HEADER_KEYS).issubset(inhdulist[0].header.keys()):
+                    return render(request, "base_process_header.html", {'header': repr(inhdulist[0].header),
+                                                                        'uuid': str(file.uuid),
+                                                                        'missing_key': True,
+                                                                        'required': REQUIRED_HEADER_KEYS})
+
             header = FITSHeader()
 
             # Iterate through all the header values and add these to the database
             for key, value in zip(inhdulist[0].header.keys(), inhdulist[0].header.values()):
-                # We have to replace the - in the keys becuase it's not supported by Python or the database.
+                # We have to replace the - in the keys because it's not supported by Python or the database.
                 # All keys are also lowercase in the model.
                 setattr(header, key.lower().replace("-", "_"), value)
 
@@ -122,9 +132,16 @@ def process_header(request, uuid):
     if file.user != request.user:
         raise PermissionDenied
 
-    header = fits.get_header(os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename))
+    hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename))
 
-    return render(request, "base_process_header.html", {'header': header, 'uuid': str(file.uuid)})
+    header_text = repr(hdulist[0].header)
+
+    if not set(REQUIRED_HEADER_KEYS).issubset(hdulist[0].header.keys()):
+        return render(request, "base_process_header.html", {'header': header_text,
+                                                            'uuid': str(file.uuid),
+                                                            'missing_key': True, 'required': REQUIRED_HEADER_KEYS})
+
+    return render(request, "base_process_header.html", {'header': header_text, 'uuid': str(file.uuid), 'missing_key': False})
 
 
 @login_required
@@ -142,7 +159,7 @@ def process_observation(request):
         raise PermissionDenied
 
     if fits_file.process_status != 'HEADER':
-        return render(request, "base_process_already.html")
+        return render(request, "base_process_ooo.html")
 
     if request.method == "POST":
         form = ObservationForm(request.POST)
@@ -180,9 +197,9 @@ def process_astrometry(request):
     fits_file = get_object_or_404(FITSFile, pk=file_id)
 
     if fits_file.process_status != 'OBSERVATION':
-        return render(request, "base_process_already.html")
+        return render(request, "base_process_ooo.html")
 
-    if request.user.id is not fits_file.uploaded_by.id:
+    if request.user != fits_file.uploaded_by:
         raise PermissionDenied
 
     # Run the astrometry process for the file
@@ -209,7 +226,10 @@ def process_photometry(request):
     fits_file = get_object_or_404(FITSFile, pk=file_id)
 
     if fits_file.process_status != 'ASTROMETRY':
-        return render(request, "base_process_already.html")
+        return render(request, "base_process_ooo.html")
+
+    if request.user != fits_file.uploaded_by:
+        raise PermissionDenied
 
     photometry.do_photometry(fits_file.fits_filename, fits_file.id)
 
@@ -229,21 +249,25 @@ def process_calibration(request):
 
     fits_file = get_object_or_404(FITSFile, pk=file_id)
 
+    if request.user != fits_file.uploaded_by:
+        raise PermissionDenied
+
     if fits_file.process_status != 'PHOTOMETRY':
-        return render(request, "base_process_already.html")
+        return render(request, "base_process_ooo.html")
 
     calibration.do_calibration(file_id)
 
-    #fits_file.process_status = 'COMPLETE'
+    fits_file.process_status = 'COMPLETE'
 
-    #fits_file.save()
+    fits_file.save()
 
-    #return redirect('process')
+    return redirect('process')
 
-    return HttpResponse('done')
+    #return HttpResponse('done')
 
 
 @login_required
+@permission_required('is_staff', raise_exception=True)  # Only let staff users add objects
 def add_object(request):
 
     if request.method == "POST":
@@ -257,7 +281,8 @@ def add_object(request):
                     f.write(cat_file.read())
                     f.close()
                 form.save()
-                return HttpResponse('yep')
+                newform = ObjectForm()
+                return render(request, "base_add_object.html", {'form': newform})
             else:
                 return render(request, "base_add_object.html", {'form': form})
         else:

@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 import numpy
 from django.conf import settings
 from astropy.io import ascii
@@ -9,6 +12,8 @@ from scipy import optimize
 from analysis.models import FITSFile, Observation, Photometry
 import os
 import pyfits
+
+
 
 # Global variables
 

@@ -6,8 +6,6 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.5/sweetalert2.min.js" integrity="sha256-xofl41Tt0WRg2Q0LrntvSB6qv1Mzz/ZLvSyi+O08d1g=" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.5/sweetalert2.min.css" integrity="sha256-fmdDIg1KI3wbdH0gfFQGXexodQ3SQzBTHDGicLAgje8=" crossorigin="anonymous" />
 
     <style>
         body {
@@ -28,7 +26,7 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="#">CAPS Analysis Service</a>
+      <a class="navbar-brand" href="{% url 'home' %}">HOYS-CAPS Processing Portal</a>
     </div>
 
     <!-- Collect the nav links, forms, and other content for toggling -->
@@ -37,9 +35,9 @@
           {% if not user.is_authenticated %}
               <li><a href="{% url 'auth_login' %}">Login</a></li>
           {% else %}
-              <li><a href="{% url 'home' %}">Home</a></li>
+              <li><a href="{% url 'home' %}">Upload</a></li>
               <li><a href="{% url 'process' %}">Process files</a></li>
-              <li><a href="{% url 'add_object' %}">Add new target</a></li>
+              {% if user.is_staff %}<li><a href="{% url 'add_object' %}">Add new target</a></li>{% endif %}
               <li><a href="{% url 'auth_logout' %}">Logout</a></li>
           {% endif %}
       </ul>
@@ -58,7 +56,7 @@
     <footer>
         <hr>
         <div align="center">
-            <p>CAPS Analysis Service <br />University of Kent</p>
+            <p>HOYS-CAPS Processing Portal <br />University of Kent</p>
         </div>
     </footer>
 
