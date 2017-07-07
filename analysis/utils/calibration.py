@@ -14,15 +14,17 @@ import os
 import pyfits
 
 
-
-# Global variables
-
 SKIP_ROWS_IN_CAT = 9  # number of rows to skip in photometry tables
 POS_OFFSET = 1  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
 
 
-# define functions for model of photometri calibration
 def fitfunc_cal(p, mag_s):
+    """
+    Polynomial fitting function for a magnitude
+    :param p:
+    :param mag_s:
+    :return:
+    """
     # some exponential function
     # z = mag_s + p[0] + p[1] * numpy.exp(p[2]*(mag_s))
     # some polynomials of various degrees
@@ -32,37 +34,48 @@ def fitfunc_cal(p, mag_s):
     # the photofunction
     # z = mag_s + p[0] + p[1]*numpy.log10(10**(p[2]*(mag_s-p[3])) + 1.) + 0.0*p[4]
     # the photofunction + polynomial
-    z = mag_s + p[0] + p[1] * numpy.log10(10 ** (p[2] * (mag_s - p[3])) + 1.) + p[4] * mag_s + p[5] * (mag_s ** 2) + p[
-                                                                                                                         6] * (
-                                                                                                                     mag_s ** 3) + \
-        p[7] * (mag_s ** 4)
+    z = mag_s + p[0] + p[1] * numpy.log10(10 ** (p[2] * (mag_s - p[3])) + 1.) + p[4] * mag_s + p[5] * (mag_s ** 2) + \
+        p[6] * (mag_s ** 3) + p[7] * (mag_s ** 4)
     return z
 
 
 def errfunc_cal(p, mag_m, mag_s):
-    # weight error function by inverse square of magnitudes to ensure no systematic
-    # off sets at bright mags
+    """
+    weight error function by inverse square of magnitudes to ensure no systematic
+    off sets at bright mags
+    :param p:
+    :param mag_m:
+    :param mag_s:
+    :return:
+    """
     err = (mag_m - fitfunc_cal(p, mag_s)) / (mag_s - 8) / (mag_s - 8)
     # print "p", p
     return err
 
 
-def array_format(myarray, format):
+def array_format(myarray, arr_format):
+    """
+    Format an array for output - by putting a space between items
+    :param myarray:
+    :param arr_format:
+    :return:
+    """
     string = ''
     for item in myarray:
-        string += format % item + ' '
+        string += arr_format % item + ' '
     return string
-
-# mastercat = ascii.read(settings.MASTER_CATALOGUE_FILE)
 
 
 def do_calibration(file_id):
+    """
+    Run the calibration on a particular file in the database. Put the calibrated magnitudes back into the database, and
+    also write them out to a file.
+    :param file_id: The ID of the file in the database
+    :return:
+    """
 
     fits_file = FITSFile.objects.get(pk=file_id)
     observation = Observation.objects.get(fits=fits_file)
-
-    # read in the master catalogue and make individual arrays for the columns
-    #mastercat = numpy.loadtxt(settings.MASTER_CATALOGUE_FILE, dtype='string', converters=None, usecols=None, unpack=False, skiprows=SKIP_ROWS_IN_CAT)
 
     mastercat = ascii.read(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number) + '.cat'))
 
@@ -73,37 +86,25 @@ def do_calibration(file_id):
     # needs to be calculated at some stage, start with defining it
     cal_offset = observation.target.cal_offset
 
-    #num_m = numpy.array(mastercat[:, 0])
     num_m = numpy.array(mastercat['NUMBER'])
     num_m = num_m.astype(numpy.float32)
 
-    #mag_m = numpy.array(mastercat[:, 1])
     mag_m = numpy.array(mastercat['MAG_AUTO'])
     # add the calibration offset to the master photometry
     mag_m = mag_m.astype(numpy.float32) + cal_offset
 
-
-    #mage_m = numpy.array(mastercat[:, 2])
     mage_m = numpy.array(mastercat['MAGERR_AUTO'])
     mage_m = mage_m.astype(numpy.float32)
 
-
-    #ra_m = numpy.array(mastercat[:, 5])
     ra_m = numpy.array(mastercat['ALPHA_J2000'])
     ra_m = ra_m.astype(numpy.float32)
 
-
-    #de_m = numpy.array(mastercat[:, 6])
     de_m = numpy.array(mastercat['DELTA_J2000'])
     de_m = de_m.astype(numpy.float32)
 
-
-    #fwhm_m = numpy.array(mastercat[:, 7])
     fwhm_m = numpy.array(mastercat['FWHM_WORLD'])
     fwhm_m = fwhm_m.astype(numpy.float32)
 
-
-    #flag_m = numpy.array(mastercat[:, 8])
     flag_m = numpy.array(mastercat['FLAGS'])
     flag_m = flag_m.astype(numpy.float32)
 
@@ -123,32 +124,12 @@ def do_calibration(file_id):
     de_array = numpy.zeros(star_number, dtype=float)
     fwhm_array = numpy.zeros(star_number, dtype=float)
     flag_array = numpy.zeros(star_number, dtype=float)
-    detection_count = numpy.zeros(star_number, dtype=float)
-    time = ''
-    # limiting magnitudes of each picture
-    #maglim_array = numpy.zeros(file_number, dtype=float)
-    maglim = 0
     # checks if the star is near the edge in any of the frames
     edge_array = numpy.zeros(star_number, dtype=float)
-    # limiting coordinates of each picture
-    #RA_MIN_array = numpy.zeros(file_number, dtype=float)
-    #RA_MAX_array = numpy.zeros(file_number, dtype=float)
-    #DE_MIN_array = numpy.zeros(file_number, dtype=float)
-    #DE_MAX_array = numpy.zeros(file_number, dtype=float)
-    RA_MIN = 0
-    RA_MAX = 0
-    DE_MIN = 0
-    DE_MAX = 0
-    # rms of calibration of photometry
-    #rmscal_array = numpy.zeros(file_number, dtype=float)
-    # Array to indicate if mags are detections (0), or lower/upper (-1,+1) limits
-    photlim_array = numpy.zeros(star_number, dtype=float)
 
     # make coordcatalogue for the master table
     # cat_master = ICRS(ra_m, de_m, unit=(u.degree, u.degree))
     cat_master = SkyCoord(ra_m, de_m, frame='icrs', unit=u.degree)
-
-    counter = 0
 
     # read in FITS header of corresponding image and get observing date
     # which is stored in header 'TIMETIME' by the 'change_header.py' program
@@ -161,39 +142,31 @@ def do_calibration(file_id):
     ypix = header['NAXIS2']
 
     secondcat = ascii.read(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id), fits_file.catalogue_filename))
-    #num_2 = numpy.array(secondcat[:, 0])
+
     num_2 = secondcat['NUMBER']
     num_2 = num_2.astype(numpy.float32)
 
-    #mag_2 = numpy.array(secondcat[:, 1])
     mag_2 = secondcat['MAG_AUTO']
     mag_2 = mag_2.astype(numpy.float32)
 
-    #mage_2 = numpy.array(secondcat[:, 2])
     mage_2 = secondcat['MAGERR_AUTO']
     mage_2 = mage_2.astype(numpy.float32)
 
-    #ra_2 = numpy.array(secondcat[:, 5])
     ra_2 = secondcat['ALPHA_J2000']
     ra_2 = ra_2.astype(numpy.float64)
 
-    #de_2 = numpy.array(secondcat[:, 6])
     de_2 = secondcat['DELTA_J2000']
     de_2 = de_2.astype(numpy.float64)
 
-    #fwhm_2 = numpy.array(secondcat[:, 7])
     fwhm_2 = secondcat['FWHM_WORLD']
     fwhm_2 = fwhm_2.astype(numpy.float64)
 
-    #flag_2 = numpy.array(secondcat[:, 8])
     flag_2 = secondcat['FLAGS']
     flag_2 = flag_2.astype(numpy.float32)
 
-    #x_2 = numpy.array(secondcat[:, 3])
     x_2 = secondcat['X_IMAGE']
     x_2 = x_2.astype(numpy.float32)
 
-    #y_2 = numpy.array(secondcat[:, 4])
     y_2 = secondcat['Y_IMAGE']
     y_2 = y_2.astype(numpy.float32)
 
@@ -228,9 +201,6 @@ def do_calibration(file_id):
     mag_2[check_edge[0]] = -99
     mage_2[check_edge[0]] = -99
 
-    print "#########################################"
-    print "number of stars in catalogue:", len(num_2)
-
     # make coordcatalogue for the catalogue
     # cat_2 = ICRS(ra_2, de_2, unit=(u.degree, u.degree))
     cat_2 = SkyCoord(ra_2, de_2, frame='icrs', unit=u.degree)
@@ -254,55 +224,17 @@ def do_calibration(file_id):
     match_flag = flag_2[idx]
     match_edge = edge_2[idx]
 
-    print 'mag_m '
-    print mag_m
-
-    print 'min_use '
-    print min_use
-
-    print 'max_use '
-    print max_use
-
-    print 'dra '
-    print dra
-
-    print 'POS_OFFSET '
-    print POS_OFFSET
-
-    print 'dde '
-    print dde
-
-    print 'flag_m '
-    print flag_m
-
-    print 'match_flag '
-    print match_flag
-
-    print 'match_mag '
-    print match_mag
-
     # take the matches within a given distance (no flags) and determine photometry
     # offset of catalogue to master table
     check = numpy.where((mag_m > min_use) & (mag_m < max_use) & (numpy.absolute(dra) < POS_OFFSET) & (
         numpy.absolute(dde) < POS_OFFSET) & (flag_m == 0) & (match_flag == 0) & ((mag_m - match_mag) < 5.))
 
-    print '## check ##############################'
-
-    print check
-
-    print '#######################################'
-
-    # check=numpy.where( (numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET ) & (flag_m <= 8) & (match_flag <= 8))
+    # check=numpy.where( (numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET ) & (flag_m <= 8) &
+    # (match_flag <= 8))
     starsused = len(check[0])
 
     # determine the median photometric offset as start for the fitting
     med_offset = numpy.median(mag_m[check[0]] - match_mag[check[0]])
-
-    print '#### med offset ###################################'
-
-    print med_offset
-
-    print '###################################################'
 
     # do the fitting
     # but remove outliers +-0.3mag based on the above med_offset
@@ -311,12 +243,6 @@ def do_calibration(file_id):
             numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET) & (flag_m == 0) & (
             match_flag == 0) & (
             (mag_m - match_mag) < 5.))
-
-    print '#### fitting check ####################################'
-
-    print check
-
-    print '#######################################################'
 
     # for photofunction + 4th order polynomial fit
     parameters = [med_offset, 0, 0, 0, 0, 0, 0, 0]
@@ -371,9 +297,6 @@ def do_calibration(file_id):
         # fill in the main arrays with the data from the catalogue,
         # but only for good matches, and use corrected magnitudes
     check = numpy.where((numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET))
-    print '##############'
-    print check[0]
-    print '###############'
 
     # if the fit has been done
     if numbers_fit > 5:
@@ -414,44 +337,41 @@ def do_calibration(file_id):
     # software to analyse data
 
     # set filename for output catalogue
-    phot_cal = os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id), fits_file.fits_filename + '_calibrated.cat')
+    phot_cal = os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id),
+                            fits_file.fits_filename + '_calibrated.cat')
     # open file for writing
     photcalfile = open(phot_cal, 'w')
 
     # write out the header info about file organisation
-    photcalfile.write(("#   1 NUMBER                 Running object number \n") % ())
+    photcalfile.write("#   1 NUMBER                 Running object number \n" % ())
     photcalfile.write(
-        ("#   2 MAG_CAL                Calibrated Kron-like elliptical aperture magnitude         [mag] \n") % ())
+        "#   2 MAG_CAL                Calibrated Kron-like elliptical aperture magnitude         [mag] \n" % ())
     photcalfile.write(
-        ("#   3 MAGERR_AUTO            RMS error for AUTO magnitude                               [mag] \n") % ())
+        "#   3 MAGERR_AUTO            RMS error for AUTO magnitude                               [mag] \n" % ())
     photcalfile.write(
-        ("#   4 X_IMAGE                Object position along x                                    [pixel] \n") % ())
+        "#   4 X_IMAGE                Object position along x                                    [pixel] \n" % ())
     photcalfile.write(
-        ("#   5 Y_IMAGE                Object position along y                                    [pixel] \n") % ())
+        "#   5 Y_IMAGE                Object position along y                                    [pixel] \n" % ())
     photcalfile.write(
-        ("#   6 ALPHA_J2000            Right ascension of barycenter (J2000)                      [deg] \n") % ())
+        "#   6 ALPHA_J2000            Right ascension of barycenter (J2000)                      [deg] \n" % ())
     photcalfile.write(
-        ("#   7 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n") % ())
+        "#   7 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n" % ())
     photcalfile.write(
-        ("#   8 FWHM_WORLD             FWHM assuming a gaussian core                              [deg] \n") % ())
+        "#   8 FWHM_WORLD             FWHM assuming a gaussian core                              [deg] \n" % ())
     photcalfile.write(
-        ("#   9 FLAGS                  Extraction flags    \n") % ())
+        "#   9 FLAGS                  Extraction flags    \n" % ())
     photcalfile.write(
-        ("#  10 MAG_AUTO               Kron-like elliptical aperture magnitude                    [mag] \n") % ())
+        "#  10 MAG_AUTO               Kron-like elliptical aperture magnitude                    [mag] \n" % ())
     # etc
 
-    print 'num_2'
-    print num_2
-    print len(num_2)
-
     # write out some summary stats for the file
-    photcalfile.write(("# Extra info in first line contains: \n") % ())
-    photcalfile.write(("# a) Time of Observations [days] \n") % ())
-    photcalfile.write(("# b) Number of detected stars \n") % ())
-    photcalfile.write(("# c) Number of detected stars used for calibration \n") % ())
-    photcalfile.write(("# d) Median Offset in calibration [mag] \n") % ())
-    photcalfile.write(("# e) Limiting Magnitude [mag] \n") % ())
-    photcalfile.write(("# f) Fit parameters in calibration \n") % ())
+    photcalfile.write("# Extra info in first line contains: \n" % ())
+    photcalfile.write("# a) Time of Observations [days] \n" % ())
+    photcalfile.write("# b) Number of detected stars \n" % ())
+    photcalfile.write("# c) Number of detected stars used for calibration \n" % ())
+    photcalfile.write("# d) Median Offset in calibration [mag] \n" % ())
+    photcalfile.write("# e) Limiting Magnitude [mag] \n" % ())
+    photcalfile.write("# f) Fit parameters in calibration \n" % ())
     if numbers_fit > 10:
         photcalfile.write("%12.4s %5.0s %5.0s %6.0s %6.3s %s \n" % (time, len(num_2), numbers_fit, med_offset, maglim,
                                                                     array_format(param_cal, '%s')))
@@ -462,7 +382,8 @@ def do_calibration(file_id):
         # mag_auto and add org mag_auto as column 10
         # if the fit has been done
 
-    print 'num fit ' + str(numbers_fit)
+    if str(med_offset) == 'nan':
+        med_offset = 0
 
     # With thanks to https://stackoverflow.com/questions/18383471/django-bulk-create-function-example for the
     # example on how to use the bulk_create function so we don't thrash the DB
@@ -489,7 +410,7 @@ def do_calibration(file_id):
     if numbers_fit <= 5:
         phot_objects = [
             Photometry(
-                calibrated_magnitude=mag_2[i] + med_offset,
+                calibrated_magnitude=(mag_2[i] + med_offset),
                 magnitude_rms_error=mage_2[i],
                 x=x_2[i],
                 y=y_2[i],
@@ -507,13 +428,15 @@ def do_calibration(file_id):
 
     if numbers_fit > 10:
         for i in range(0, len(num_2)):
-            print ("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f \n") % (i + 1, fitfunc_cal(param_cal, mag_2[i]), mage_2[i], x_2[i], y_2[i], ra_2[i], de_2[i], fwhm_2[i], flag_2[i], mag_2[i])
-            photcalfile.write(("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f \n") % (i + 1, fitfunc_cal(param_cal, mag_2[i]), mage_2[i], x_2[i], y_2[i], ra_2[i], de_2[i], fwhm_2[i], flag_2[i], mag_2[i]))
+            photcalfile.write("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f \n" %
+                              (i + 1, fitfunc_cal(param_cal, mag_2[i]), mage_2[i], x_2[i], y_2[i], ra_2[i], de_2[i],
+                               fwhm_2[i], flag_2[i], mag_2[i]))
             # if there was no fit, just apply median offset
     if numbers_fit <= 5:
         for i in range(0, len(num_2)):
-            print ("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f \n") % (i + 1, mag_2[i] + med_offset, mage_2[i], x_2[i], y_2[i], ra_2[i], de_2[i], fwhm_2[i], flag_2[i], mag_2[i])
-            photcalfile.write(("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f \n") % (i + 1, mag_2[i] + med_offset, mage_2[i], x_2[i], y_2[i], ra_2[i], de_2[i], fwhm_2[i], flag_2[i], mag_2[i]))
+            photcalfile.write("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f \n" %
+                              (i + 1, mag_2[i] + med_offset, mage_2[i], x_2[i], y_2[i], ra_2[i], de_2[i], fwhm_2[i],
+                               flag_2[i], mag_2[i]))
 
             # close file after writing
     photcalfile.close()

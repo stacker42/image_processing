@@ -56,9 +56,6 @@ def do_astrometry(path, file_id):
     inhdulist[0].header['CRPIX1'] = (xnum, 'X reference pixel')
     inhdulist[0].header['CRPIX2'] = (ynum, 'Y reference pixel')
 
-    # set the catalogues for astrometric matching
-    command = " -ASTREF_CATALOG 2MASS -ASTREF_BAND DEFAULT "
-
     # the CRVAL keywords need to be calculated
     # get the ra values
     checktarget = 0.0
@@ -109,8 +106,8 @@ def do_astrometry(path, file_id):
     # print inhdulist[0].header
 
     # define the list of astrometric catalogues and bands to use
-    listofcats = ['2MASS', 'USNO-B1', 'PPMX', 'NOMAD-1', 'DENIS-3', 'USNO-A1', 'USNO-A2', 'GSC-1.3', 'GSC-2.2', 'GSC-2.3',
-                  'UCAC-1', 'UCAC-2', 'UCAC-3', 'SDSS-R3', 'SDSS-R5', 'SDSS-R6', 'SDSS-R7']
+    listofcats = ['2MASS', 'USNO-B1', 'PPMX', 'NOMAD-1', 'DENIS-3', 'USNO-A1', 'USNO-A2', 'GSC-1.3', 'GSC-2.2',
+                  'GSC-2.3', 'UCAC-1', 'UCAC-2', 'UCAC-3', 'SDSS-R3', 'SDSS-R5', 'SDSS-R6', 'SDSS-R7']
     listofbands = ['DEFAULT', 'REDDEST', 'BLUEST']
 
     # write out file and then run the astrometry software
@@ -126,17 +123,21 @@ def do_astrometry(path, file_id):
         catused = listofcats[cat]
         bandused = listofbands[band]
         shutil.copy(os.path.join(WORKING_DIRECTORY, "wcsprep.fits"), j(WORKING_DIRECTORY, "test.fits"))
-        sex_command = ['sex', '-c', j(settings.CONFIGS_DIRECTORY, 'default_wcs.sex'), j(WORKING_DIRECTORY, 'test.fits'), '-CATALOG_NAME', j(WORKING_DIRECTORY, 'test.cat'), '-PARAMETERS_NAME', j(settings.CONFIGS_DIRECTORY, 'default_wcs.param'), '-FILTER_NAME', j(settings.CONFIGS_DIRECTORY, 'default.conv')]
+
+        sex_command = ['sex', '-c', j(settings.CONFIGS_DIRECTORY, 'default_wcs.sex'), j(WORKING_DIRECTORY, 'test.fits'),
+                       '-CATALOG_NAME', j(WORKING_DIRECTORY, 'test.cat'), '-PARAMETERS_NAME',
+                       j(settings.CONFIGS_DIRECTORY, 'default_wcs.param'), '-FILTER_NAME',
+                       j(settings.CONFIGS_DIRECTORY, 'default.conv')]
         subprocess.check_output(sex_command)
-        scamp_command = ['scamp', j(WORKING_DIRECTORY, 'test.cat'), '-c', j(settings.CONFIGS_DIRECTORY, 'scamp.conf'), '-ASTREF_CATALOG', catused, '-ASTREF_BAND', bandused]
-        # SCAMP is not normal and sends ALL output to STDERR, which means we don't get anything without redirecting STDERR.
-        #try:
-        #stderr=subprocess.STDOUT
+
+        scamp_command = ['scamp', j(WORKING_DIRECTORY, 'test.cat'), '-c', j(settings.CONFIGS_DIRECTORY, 'scamp.conf'),
+                         '-ASTREF_CATALOG', catused, '-ASTREF_BAND', bandused]
         scamp_output = subprocess.check_output(scamp_command)
-        #except subprocess.CalledProcessError as e:
-        #    istereasolution = 1
-        missfits_command = ['missfits', '-c', j(settings.CONFIGS_DIRECTORY, 'default.missfits'), j(WORKING_DIRECTORY, 'test.fits'), '-HEADER_SUFFIX', '\'.head\'', '-WRITE_XML', 'N']
+
+        missfits_command = ['missfits', '-c', j(settings.CONFIGS_DIRECTORY, 'default.missfits'),
+                            j(WORKING_DIRECTORY, 'test.fits'), '-HEADER_SUFFIX', '\'.head\'', '-WRITE_XML', 'N']
         subprocess.check_output(missfits_command)
+
         shutil.move(j(WORKING_DIRECTORY, "test.fits"), j(WORKING_DIRECTORY, "astro.fits"))
         # Cleanup files dropped by sextractor and SCAMP
         os.remove(j(WORKING_DIRECTORY, 'test.fits.back'))
@@ -153,13 +154,13 @@ def do_astrometry(path, file_id):
             print "solution found"
             solution_found = 1
 
-        if (cat <= len(listofcats)):
+        if cat <= len(listofcats):
             cat = cat + 1
-        if (cat == len(listofcats)):
+        if cat == len(listofcats):
             cat = 0
-            if (band <= len(listofbands)):
+            if band <= len(listofbands):
                 band = band + 1
-            if (band <= len(listofbands)):
+            if band <= len(listofbands):
                 print "No Astrometric solution found!"
                 catused = 'none'
                 bandused = 'none'

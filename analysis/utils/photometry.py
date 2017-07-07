@@ -13,5 +13,9 @@ def do_photometry(filename, file_id):
     """
     if not os.path.exists(os.path.join(settings.CATALOGUE_DIRECTORY, str(file_id))):
         os.mkdir(os.path.join(settings.CATALOGUE_DIRECTORY, str(file_id)))
-    sex_command = ['sex', os.path.join(settings.FITS_DIRECTORY, str(file_id), filename), '-c', os.path.join(settings.CONFIGS_DIRECTORY, 'default_phot.sex'), '-CATALOG_NAME', os.path.join(settings.CATALOGUE_DIRECTORY, str(file_id), filename) + ".cat", '-PARAMETERS_NAME', os.path.join(settings.CONFIGS_DIRECTORY, 'default_phot.param'), '-FILTER_NAME', os.path.join(settings.CONFIGS_DIRECTORY, 'default.conv')]
+    sex_command = ['sex', os.path.join(settings.FITS_DIRECTORY, str(file_id), filename), '-c',
+                   os.path.join(settings.CONFIGS_DIRECTORY, 'default_phot.sex'), '-CATALOG_NAME',
+                   os.path.join(settings.CATALOGUE_DIRECTORY, str(file_id), filename) + ".cat", '-PARAMETERS_NAME',
+                   os.path.join(settings.CONFIGS_DIRECTORY, 'default_phot.param'), '-FILTER_NAME',
+                   os.path.join(settings.CONFIGS_DIRECTORY, 'default.conv')]
     subprocess.check_output(sex_command)

@@ -101,10 +101,10 @@ def handle_upload(f, fileattrs, request):
     if chunked and (fileattrs['qqtotalparts'] - 1 == fileattrs['qqpartindex']):
         # Save to disk
         if combine_chunks(fileattrs['qqtotalparts'],
-                             fileattrs['qqtotalfilesize'],
-                             source_folder=os.path.dirname(dest),
-                             dest=os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']),
-                             uuid=fileattrs['qquuid']):
+                          fileattrs['qqtotalfilesize'],
+                          source_folder=os.path.dirname(dest),
+                          dest=os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']),
+                          uuid=fileattrs['qquuid']):
             # save to db
             upload = UnprocessedUpload()
             upload.uuid = fileattrs['qquuid']

@@ -16,7 +16,7 @@ from django.views.generic import View
 
 from forms import UploadFileForm, ObjectForm, ObservationForm
 from models import *
-from utils import fits, upload, astrometry, photometry, calibration, general
+from utils import fits, upload, astrometry, photometry, calibration
 
 
 @login_required
@@ -58,14 +58,14 @@ def process_header(request, uuid):
 
     if request.method == "POST":
         try:
-            file = UnprocessedUpload.objects.get(uuid=uuid)
+            unprocessed_file = UnprocessedUpload.objects.get(uuid=uuid)
         except (ObjectDoesNotExist, ValidationError):
             raise Http404
 
         if request.POST.get('delete') == "true":
             # Don't let other users delete files they didn't upload!
-            if file.user == request.user:
-                file.delete()
+            if unprocessed_file.user == request.user:
+                unprocessed_file.delete()
                 upload.handle_deleted_file(str(uuid))
 
                 return redirect('home')
@@ -74,15 +74,15 @@ def process_header(request, uuid):
         else:
             # Need to add the files to the database
             # First lets check that the user has permission to work with this file
-            if not request.user == file.user:
+            if not request.user == unprocessed_file.user:
                 raise PermissionDenied
 
             inhdulist = fits.get_hdu_list(
-                os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename))
+                os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid), unprocessed_file.filename))
 
             if not set(REQUIRED_HEADER_KEYS).issubset(inhdulist[0].header.keys()):
                     return render(request, "base_process_header.html", {'header': repr(inhdulist[0].header),
-                                                                        'uuid': str(file.uuid),
+                                                                        'uuid': str(unprocessed_file.uuid),
                                                                         'missing_key': True,
                                                                         'required': REQUIRED_HEADER_KEYS})
 
@@ -101,23 +101,23 @@ def process_header(request, uuid):
             fits_file.header = header
             fits_file.fits_filename = ''
             fits_file.catalog_filename = ''
-            fits_file.uploaded_by = file.user
-            fits_file.upload_time = file.upload_time
+            fits_file.uploaded_by = unprocessed_file.user
+            fits_file.upload_time = unprocessed_file.upload_time
 
             fits_file.save()
 
             # Make a new directory for the file and put it into this new directory.
             os.mkdir(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
-            shutil.move(os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename),
-                        os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), file.filename))
-            upload.handle_deleted_file(str(file.uuid))
+            shutil.move(os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid), unprocessed_file.filename),
+                        os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), unprocessed_file.filename))
+            upload.handle_deleted_file(str(unprocessed_file.uuid))
 
-            fits_file.fits_filename = file.filename
+            fits_file.fits_filename = unprocessed_file.filename
 
             fits_file.save()
 
             # Seeing as we don't need the reference to the unprocessed file any more, delete it.
-            file.delete()
+            unprocessed_file.delete()
 
             # Set the current stage of the processing
             fits_file.process_status = 'HEADER'
@@ -126,22 +126,24 @@ def process_header(request, uuid):
 
             return redirect('process')
 
-    file = get_object_or_404(UnprocessedUpload, uuid=uuid)
+    unprocessed_file = get_object_or_404(UnprocessedUpload, uuid=uuid)
 
     # Only users of the file can process the header
-    if file.user != request.user:
+    if unprocessed_file.user != request.user:
         raise PermissionDenied
 
-    hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(file.uuid), file.filename))
+    hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid),
+                                             unprocessed_file.filename))
 
     header_text = repr(hdulist[0].header)
 
     if not set(REQUIRED_HEADER_KEYS).issubset(hdulist[0].header.keys()):
         return render(request, "base_process_header.html", {'header': header_text,
-                                                            'uuid': str(file.uuid),
+                                                            'uuid': str(unprocessed_file.uuid),
                                                             'missing_key': True, 'required': REQUIRED_HEADER_KEYS})
 
-    return render(request, "base_process_header.html", {'header': header_text, 'uuid': str(file.uuid), 'missing_key': False})
+    return render(request, "base_process_header.html", {'header': header_text, 'uuid': str(unprocessed_file.uuid),
+                                                        'missing_key': False})
 
 
 @login_required
@@ -188,7 +190,6 @@ def process_astrometry(request):
     """
     Run the astrometry process for a particular file based on its ID
     :param request:
-    :param file_id: The ID of the file to process
     :return:
     """
 
@@ -203,7 +204,8 @@ def process_astrometry(request):
         raise PermissionDenied
 
     # Run the astrometry process for the file
-    astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename), str(fits_file.id))
+    astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename),
+                             str(fits_file.id))
 
     fits_file.process_status = 'ASTROMETRY'
 
@@ -217,7 +219,6 @@ def process_photometry(request):
     """
     Run the photometry prpcess for a particular file based on its ID
     :param request:
-    :param file_id: The ID of the file to process
     :return:
     """
 
@@ -244,6 +245,11 @@ def process_photometry(request):
 
 @login_required
 def process_calibration(request):
+    """
+    Run the calibration for a particular file based on its ID
+    :param request:
+    :return:
+    """
 
     file_id = request.GET.get('file_id')
 
@@ -263,12 +269,15 @@ def process_calibration(request):
 
     return redirect('process')
 
-    #return HttpResponse('done')
-
 
 @login_required
 @permission_required('is_staff', raise_exception=True)  # Only let staff users add objects
 def add_object(request):
+    """
+    Add a new object/target to the database (as long as the user is 'staff') with its catalog
+    :param request:
+    :return:
+    """
 
     if request.method == "POST":
         form = ObjectForm(request.POST)
@@ -295,11 +304,10 @@ def add_object(request):
 
 class UploadView(View):
     """ View which will handle all upload requests sent by Fine Uploader.
-    See: https://docs.djangoproject.com/en/dev/topics/security/#user-uploaded-content-security
 
     Handles POST and DELETE requests.
 
-    This view was created by FineUploader.
+    This view was created by FineUploader, modified by Will Furnell
     """
 
     @csrf_exempt
