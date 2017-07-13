@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Add or modify a device{% endblock %}
+
+{% block content %}
+
+    <h1>Add or modify an imaging device</h1>
+
+    <form action="." method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Submit" class="btn btn-success">
+    </form>
+
+{% endblock %}

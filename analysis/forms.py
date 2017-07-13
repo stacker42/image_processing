@@ -1,6 +1,6 @@
 # coding=utf-8
 from django import forms
-from analysis.models import Object, Observation
+from models import Object, Observation, ImagingDevice
 
 
 class UploadFileForm(forms.Form):
@@ -29,8 +29,26 @@ class ObjectForm(forms.ModelForm):
 
 
 class ObservationForm(forms.ModelForm):
+    # We have to do this so we can filter by user in the queryset
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super(ObservationForm, self).__init__(*args, **kwargs)
+        self.fields['device'].queryset = ImagingDevice.objects.filter(user=self.user)
 
     class Meta:
         model = Observation
-        fields = ('target',)
-        labels = {'target': 'Target of observation'}
+        fields = ('target', 'device')
+        labels = {'target': 'Target of observation', 'device': 'Device used'}
+
+
+class HeaderForm(forms.Form):
+    EXPTIME = forms.FloatField(label="Exposure time (EXPTIME)")
+    FILTER = forms.CharField(max_length=255, label="Filter (FILTER)")
+    DATE_OBS = forms.CharField(max_length=255, label="Date of observation [2017-01-05T17:10:02] (DATE-OBS)")
+
+
+class ImagingDeviceForm(forms.ModelForm):
+    class Meta:
+        model = ImagingDevice
+        fields = ('name', 'scale')
+        labels = {'name': 'Name of your device', 'scale': 'Pixel scale'}

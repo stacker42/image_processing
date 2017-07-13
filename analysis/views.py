@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 
 import json
 import shutil
-
 import os
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
@@ -13,10 +12,10 @@ from django.http import Http404
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-
-from forms import UploadFileForm, ObjectForm, ObservationForm
+from forms import UploadFileForm, ObjectForm, ObservationForm, HeaderForm, ImagingDeviceForm
 from models import *
 from utils import fits, upload, astrometry, photometry, calibration
+import pyfits
 
 
 @login_required
@@ -53,7 +52,7 @@ def process_header(request, uuid):
     """
 
     REQUIRED_HEADER_KEYS = [
-        'NAXIS1', 'NAXIS2', 'OBJCTRA', 'OBJCTDEC', 'EXPTIME', 'FILTER', 'IMAGETYP', 'JD', 'PIERSIDE', 'DATE-OBS'
+        'NAXIS1', 'NAXIS2', 'EXPTIME', 'FILTER', 'DATE-OBS'
     ]
 
     if request.method == "POST":
@@ -86,19 +85,15 @@ def process_header(request, uuid):
                                                                         'missing_key': True,
                                                                         'required': REQUIRED_HEADER_KEYS})
 
-            header = FITSHeader()
+            header = {}
 
-            # Iterate through all the header values and add these to the database
+            # Iterate through all the header values and add these to a dictionary
             for key, value in zip(inhdulist[0].header.keys(), inhdulist[0].header.values()):
-                # We have to replace the - in the keys because it's not supported by Python or the database.
-                # All keys are also lowercase in the model.
-                setattr(header, key.lower().replace("-", "_"), value)
-
-            header.save()
+                header[key] = value
 
             fits_file = FITSFile()
 
-            fits_file.header = header
+            fits_file.header = json.dumps(header)
             fits_file.fits_filename = ''
             fits_file.catalog_filename = ''
             fits_file.uploaded_by = unprocessed_file.user
@@ -146,6 +141,58 @@ def process_header(request, uuid):
                                                         'missing_key': False})
 
 
+def process_header_modify(request, uuid):
+    """
+    Modify (or ideally add) the required header cards to the FITS file so we'll be able to analyse it
+    :param request:
+    :param uuid: The UUID of the FITS file
+    :return:
+    """
+
+    try:
+        unprocessed_file = UnprocessedUpload.objects.get(uuid=uuid)
+    except (ObjectDoesNotExist, ValidationError):
+        raise Http404
+
+    if request.method == "POST":
+        # make changes to the file
+        form = HeaderForm(request.POST)
+        if form.is_valid():
+            inhdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, uuid, unprocessed_file.filename))
+
+            for k in form.cleaned_data.keys():
+                inhdulist[0].header[k.replace('_', '-')] = form.cleaned_data[k]
+
+            pyfits.update(os.path.join(settings.UPLOAD_DIRECTORY, uuid, unprocessed_file.filename),
+                           inhdulist[0].data, inhdulist[0].header)
+
+            print 'about to redirect'
+
+            return redirect('process_header', uuid=uuid)
+
+        else:
+            return render(request, "base_process_headerextra.html", {'form': form})
+    else:
+        inhdulist = fits.get_hdu_list(
+            os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid), unprocessed_file.filename))
+
+        header = inhdulist[0].header
+
+        initial_values = {'EXPTIME': '', 'DATE-OBS': '', 'FILTER': ''}
+
+        # Add initial values to the form, if they exist in the header (and its likely that at least one won't)
+        for k in initial_values.keys():
+            try:
+                # We replace here as we can't use hyphens in Python variable names
+                initial_values[k.replace('-', '_')] = header[k]
+            except KeyError:
+                initial_values[k.replace('-', '_')] = ''
+
+        form = HeaderForm(initial=initial_values)
+
+        return render(request, "base_process_headerextra.html", {'form': form})
+
+
 @login_required
 def process_observation(request):
     """
@@ -169,8 +216,11 @@ def process_observation(request):
             obs = form.save(commit=False)
             obs.user = request.user
             obs.fits = fits_file
-            obs.time = fits_file.header.date_obs
-            obs.filter = fits_file.header.filter
+
+            h = json.loads(fits_file.header)
+
+            obs.time = h['DATE-OBS']
+            obs.filter = h['FILTER']
             obs.save()
 
             fits_file.process_status = 'OBSERVATION'
@@ -180,7 +230,7 @@ def process_observation(request):
         else:
             return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
     else:
-        form = ObservationForm()
+        form = ObservationForm(user=request.user)
 
         return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
 
@@ -300,6 +350,102 @@ def add_object(request):
         form = ObjectForm()
 
         return render(request, "base_add_object.html", {'form': form})
+
+
+@login_required
+def add_device(request):
+    """
+    Add a new imaging device
+    :param request:
+    :return:
+    """
+    if request.method == "POST":
+        form = ImagingDeviceForm(request.POST)
+        if form.is_valid():
+            device = form.save(commit=False)
+            device.user = request.user
+            device.save()
+        else:
+            return render(request, "base_add_device.html", {'form': form})
+    else:
+        form = ImagingDeviceForm()
+
+        return render(request, "base_add_device.html", {'form': form})
+
+
+@login_required
+@permission_required('is_staff', raise_exception=True)  # Only let staff users add objects
+def modify_object(request, id):
+    """
+    Modify the attributes of a given object
+    :param request:
+    :param id: The ID of the object
+    :return:
+    """
+    object = get_object_or_404(Object, pk=id)
+
+    if request.method == "POST":
+        form = ObjectForm(request.POST, instance=object)
+        if form.is_valid():
+            form.save()
+        else:
+            return render(request, "base_add_object.html", {'form': form})
+    else:
+        form = ObjectForm(instance=object)
+
+        return render(request, "base_add_object.html", {'form': form})
+
+
+@login_required
+def modify_device(request, id):
+    """
+    Modify the attributes of a given device
+    :param request:
+    :param id: The ID of the device
+    :return:
+    """
+    imaging_device = get_object_or_404(ImagingDevice, pk=id)
+
+    if imaging_device.user != request.user:
+        raise PermissionDenied
+
+    if request.method == "POST":
+        form = ImagingDeviceForm(request.POST, instance=imaging_device)
+        if form.is_valid():
+            form.save()
+        else:
+            return render(request, "base_add_device.html", {'form': form})
+    else:
+        form = ImagingDeviceForm(instance=imaging_device)
+
+        return render(request, "base_add_object.html", {'form': form})
+
+
+@login_required
+def accounts_profile(request):
+    """
+    User profile page
+    :param request:
+    :return:
+    """
+
+    devices = ImagingDevice.objects.filter(user=request.user)
+    processed_files = FITSFile.objects.filter(uploaded_by=request.user).filter(process_status='COMPLETE')
+
+    return render(request, "base_accounts_profile.html", {'devices': devices, 'processed_files': processed_files})
+
+
+@login_required
+def objects(request):
+    """
+    List of all objects that can be chosen
+    :param request:
+    :return:
+    """
+
+    objects = Object.objects.all()
+
+    return render(request, "base_objects.html", {'objects': objects})
 
 
 class UploadView(View):

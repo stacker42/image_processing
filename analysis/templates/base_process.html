@@ -21,7 +21,7 @@
     {% if files|length > 0 %}
         <ul>
         {% for f in files %}
-            <li>{{ f.fits_filename }}
+            <li>[{{f.id }}] {{ f.fits_filename }}
                 <a class="btn btn-primary" {% if f.process_status != 'HEADER' %} disabled="true" {% else %} href="{% url 'process_observation' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Observation target</a>
                 <a class="btn btn-primary" {% if f.process_status != 'OBSERVATION' %} disabled="true" {% else %} href="{% url 'process_astrometry' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Astrometry</a>
                 <a class="btn btn-primary" {% if f.process_status != 'ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_photometry' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Photometry</a>

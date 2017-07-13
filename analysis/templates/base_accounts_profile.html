@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}My profile{% endblock %}
+
+{% block content %}
+
+    <h1>My Profile</h1>
+
+    <h2>Devices</h2>
+
+    {% if devices|length > 0 %}
+        <table class="table table-striped">
+            <tr><th>Name</th><th>NAXIS1</th><th>NAXIS2</th><th>Scale</th></tr>
+        {% for device in devices %}
+            <tr><td><a href="{% url 'modify_device' device.id %}">{{ device.name }}</a></td><td>{{ device.naxis1 }}</td><td>{{ device.naxis2 }}</td><td>{{ device.scale }}</td></tr>
+        {% endfor %}
+        </table>
+        {% else %}
+            <p>You have no devices. <a href="{% url 'add_device' %}">Add one?</a></p>
+        {% endif %}
+
+    <h2>Processed files</h2>
+
+    <ul>
+        {% if processed_files|length > 0 %}
+            {% for file in processed_files %}
+                <li>{{ file.fits_filename }}</li>
+            {% endfor %}
+            <li>Thank you for adding your files to the database!</li>
+        {% else %}
+            <li>You've not finished processing any files yet. <a href="{% url 'process' %}">Process some?</a></li>
+        {% endif %}
+    </ul>
+
+
+{% endblock %}

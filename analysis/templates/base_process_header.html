@@ -10,12 +10,17 @@
     <p>Please check the header for the file you are about to process looks correct.<br />
     If you are not sure, please choose 'abort' and the file will be deleted.</p>
     {% else %}
-    <p class="warning">The header you have supplied is missing one or more of the following required cards, and therefore
-        cannot be added.<br />
+    <p class="warning">The header you have supplied is missing one or more of the following required cards.<br />
         {% for element in required %}
             {{ element }}
         {% endfor %}
+
+        <br />
+    <a href="{% url 'process_header_modify' uuid %}" class="btn btn-success">Modify header to rectify this</a>
+    </p>
+
     {% endif %}
+
 
     <pre>
     {{ header }}
@@ -26,7 +31,7 @@
         <input name="delete" type="hidden" value="true">
         <input type="submit" class="btn btn-danger" value="This header is NOT correct, delete this file">
     </form>
-
+    <br />
     {% if not missing_key %}
     <form method="POST" action="{% url 'process_header' uuid %}" enctype="multipart/form-data">
         {% csrf_token %}

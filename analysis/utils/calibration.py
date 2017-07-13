@@ -15,7 +15,7 @@ import pyfits
 
 
 SKIP_ROWS_IN_CAT = 9  # number of rows to skip in photometry tables
-POS_OFFSET = 1  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
+POS_OFFSET = 3  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
 
 
 def fitfunc_cal(p, mag_s):
@@ -215,7 +215,6 @@ def do_calibration(file_id):
     dde = (matches.dec - cat_master.dec).arcsec
 
     # make the other matches for flags, etc.
-    match_flag = flag_2[idx]
     match_mag = mag_2[idx]
     match_mage = mage_2[idx]
     match_ra = ra_2[idx]
@@ -223,6 +222,7 @@ def do_calibration(file_id):
     match_fwhm = fwhm_2[idx]
     match_flag = flag_2[idx]
     match_edge = edge_2[idx]
+    match_d2d = d2d
 
     # take the matches within a given distance (no flags) and determine photometry
     # offset of catalogue to master table
@@ -277,6 +277,7 @@ def do_calibration(file_id):
         os.mkdir(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
 
         rectangle1 = [0.1, 0.1, 0.8, 0.8]
+
         ax1 = plt.axes(rectangle1)
         plt.scatter(mag_m[check[0]], mag_m[check[0]] - match_mag[check[0]], s=5, c="black", edgecolor='black',
                     alpha=0.8)

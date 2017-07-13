@@ -37,7 +37,8 @@
           {% else %}
               <li><a href="{% url 'home' %}">Upload</a></li>
               <li><a href="{% url 'process' %}">Process files</a></li>
-              {% if user.is_staff %}<li><a href="{% url 'add_object' %}">Add new target</a></li>{% endif %}
+              <li><a href="{% url 'objects' %}">Objects</a></li>
+              <li><a href="{% url 'accounts_profile' %}">{{ request.user.username }}'s Profile</a></li>
               <li><a href="{% url 'auth_logout' %}">Logout</a></li>
           {% endif %}
       </ul>

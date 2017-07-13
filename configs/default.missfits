@@ -43,7 +43,7 @@ NEW_SUFFIX             .miss           # suffix to add in SAVE_TYPE NEW mode
  
 #------------------------------ Miscellaneous ---------------------------------
  
-VERBOSE_TYPE           QUIET          # "QUIET","NORMAL" or "FULL"
+VERBOSE_TYPE           FULL          # "QUIET","NORMAL" or "FULL"
 WRITE_XML              Y               # Write XML file (Y/N)?
 XML_NAME               missfits.xml    # Filename for XML output
 NTHREADS               1               # 1 single thread

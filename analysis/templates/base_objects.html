@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Object List{% endblock %}
+
+{% block content %}
+    <h1>Object List</h1>
+
+    <table class="table table-striped">
+        <tr><th>ID</th><th>Name</th><th>RA</th><th>DEC</th><th>max_use</th><th>cal_offset</th></tr>
+        {% if objects|length > 0 %}
+            {% for object in objects %}
+            <tr><td>{{ object.number }}</td><td>{{ object.name }} {% if request.user.is_staff %}<a href="{% url 'modify_object'  object.number %}">(Edit)</a>{% endif %}</td><td>{{ object.ra }}</td><td>{{ object.dec }}</td><td>{{ object.max_use }}</td><td>{{ object.cal_offset }}</td></tr>
+            {% endfor %}
+        {% endif %}
+    </table>
+
+    {% if request.user.is_staff %}
+        <p><a class="btn btn-primary" href="{% url 'add_object' %}">Add object</a></p>
+    {% endif %}
+
+{% endblock %}
