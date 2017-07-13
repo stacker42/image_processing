@@ -29,12 +29,6 @@ class ObjectForm(forms.ModelForm):
 
 
 class ObservationForm(forms.ModelForm):
-    # We have to do this so we can filter by user in the queryset
-    def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)
-        super(ObservationForm, self).__init__(*args, **kwargs)
-        self.fields['device'].queryset = ImagingDevice.objects.filter(user=self.user)
-
     class Meta:
         model = Observation
         fields = ('target', 'device')

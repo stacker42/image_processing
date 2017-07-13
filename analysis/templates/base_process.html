@@ -19,17 +19,19 @@
     <h1>Processing files</h1>
 
     {% if files|length > 0 %}
-        <ul>
+        <table class="table table-striped">
         {% for f in files %}
-            <li>[{{f.id }}] {{ f.fits_filename }}
-                <a class="btn btn-primary" {% if f.process_status != 'HEADER' %} disabled="true" {% else %} href="{% url 'process_observation' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Observation target</a>
-                <a class="btn btn-primary" {% if f.process_status != 'OBSERVATION' %} disabled="true" {% else %} href="{% url 'process_astrometry' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Astrometry</a>
-                <a class="btn btn-primary" {% if f.process_status != 'ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_photometry' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Photometry</a>
-                <a class="btn btn-primary" {% if f.process_status != 'PHOTOMETRY' %} disabled="true" {% else %} href="{% url 'process_calibration' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Calibration</a></li>
+            {% if f.process_status != 'FAILED' and f.process_status != 'FAILED_USER' %}
+            <tr><td>[{{f.id }}] {{ f.fits_filename }}</td>
+                <td><a class="btn btn-primary" {% if f.process_status != 'HEADER' %} disabled="true" {% else %} href="{% url 'process_observation' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Observation target</a></td>
+                <td><a class="btn btn-primary" {% if f.process_status != 'OBSERVATION' %} disabled="true" {% else %} href="{% url 'process_astrometry' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Astrometry</a></td>
+                <td><a class="btn btn-primary" {% if f.process_status != 'ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_photometry' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Photometry</a></td>
+                <td><a class="btn btn-primary" {% if f.process_status != 'PHOTOMETRY' %} disabled="true" {% else %} href="{% url 'process_calibration' %}?file_id={{ f.id }}" onclick="loading()" {% endif %}>Calibration</a></td></tr>
+            {% endif %}
         {% endfor %}
-        </ul>
+        </table>
     {% else %}
-        <p>You currently have no files that need furthur processing.</p>
+        <p>You currently have no files that need further processing.</p>
     {% endif %}
 
 
@@ -49,16 +51,13 @@
     </div>
   </div>
 
-
-
     <script>
 
 
     function loading() {
         // Disable all buttons when we're running a request for another file
-        $('#processing').modal('show')
+        $('#processing').modal('show');
     }
-
     </script>
 
 

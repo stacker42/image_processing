@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Check astrometry{% endblock %}
+
+{% block content %}
+
+    <h1>Check astrometry output</h1>
+
+    {% load staticfiles %}
+
+    <img src="{{ ASTROMETRY_URL }}/{{ file.id }}/in-objs.jpg" width="800px">
+
+    <br />
+    <br />
+
+    <form action="{% url 'process_astrometry' %}?file_id={{ file.id }}" method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+        <input type="hidden" name="correct" value="true">
+    <input type="submit" value="Astrometry has correctly identified objects" class="btn btn-primary">
+    </form>
+    <br />
+    <form action="{% url 'process_astrometry' %}?file_id={{ file.id }}" method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+        <input type="hidden" name="correct" value="false">
+    <input type="submit" value="Astrometry has incorrectly or not identified objects" class="btn btn-danger">
+    </form>
+
+{% endblock %}

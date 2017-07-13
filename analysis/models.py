@@ -155,7 +155,12 @@ class FITSFile(models.Model):
         ('ASTROMETRY', 'Astrometry'),
         ('PHOTOMETRY', 'Photometry'),
         ('CALIBRATION', 'Calibration'),
-        ('COMPLETE', 'Processing complete')
+        ('COMPLETE', 'Processing complete'),
+        ('FAILED', 'Processing failed'),
+        ('FAILED_USER', 'User invoked processing failed'),
+        ('CHECK_ASTROMETRY', 'Check whether astrometry was successful'),
+        ('CHECK_PHOTOMETRY', 'Check whether astrometry was successful'),
+        ('CHECK_CALIBRATION', 'Check whether astrometry was successful'),
     )
 
     #header = models.ForeignKey(FITSHeader)

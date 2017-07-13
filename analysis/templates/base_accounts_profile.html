@@ -10,27 +10,43 @@
 
     {% if devices|length > 0 %}
         <table class="table table-striped">
-            <tr><th>Name</th><th>NAXIS1</th><th>NAXIS2</th><th>Scale</th></tr>
+            <tr><th>Name</th><th>Scale</th></tr>
         {% for device in devices %}
-            <tr><td><a href="{% url 'modify_device' device.id %}">{{ device.name }}</a></td><td>{{ device.naxis1 }}</td><td>{{ device.naxis2 }}</td><td>{{ device.scale }}</td></tr>
+            <tr><td><a href="{% url 'modify_device' device.id %}">{{ device.name }}</a></td><td>{{ device.scale }}</td></tr>
         {% endfor %}
         </table>
+        <p><a href="{% url 'add_device' %}">Add another device?</a></p>
         {% else %}
             <p>You have no devices. <a href="{% url 'add_device' %}">Add one?</a></p>
         {% endif %}
 
     <h2>Processed files</h2>
-
-    <ul>
         {% if processed_files|length > 0 %}
-            {% for file in processed_files %}
-                <li>{{ file.fits_filename }}</li>
-            {% endfor %}
-            <li>Thank you for adding your files to the database!</li>
+            <table class="table table-striped">
+                <tr><th>Name</th><th>Current Status</th><th>Uploaded Time</th></tr>
+                {% for file in processed_files %}
+                <tr><td>{{ file.fits_filename }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time }}</td></tr>
+                {% endfor %}
+            </table>
         {% else %}
-            <li>You've not finished processing any files yet. <a href="{% url 'process' %}">Process some?</a></li>
+            <p>You've not finished processing any files yet. <a href="{% url 'process' %}">Process some?</a></p>
         {% endif %}
-    </ul>
 
+
+    <div class="pagination">
+    <span class="step-links">
+        {% if processed_files.has_previous %}
+            <a href="?page={{ processed_files.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ processed_files.number }} of {{ processed_files.paginator.num_pages }}.
+        </span>
+
+        {% if contacts.has_next %}
+            <a href="?page={{ processed_files.next_page_number }}">next</a>
+        {% endif %}
+    </span>
+</div>
 
 {% endblock %}

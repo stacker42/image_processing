@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ObjectDoesNotExist, ValidationError, PermissionDenied
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import Http404
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -16,6 +17,7 @@ from forms import UploadFileForm, ObjectForm, ObservationForm, HeaderForm, Imagi
 from models import *
 from utils import fits, upload, astrometry, photometry, calibration
 import pyfits
+from django.db.models import Q
 
 
 @login_required
@@ -35,8 +37,8 @@ def process(request):
     :param request:
     :return:
     """
-    unprocessed = UnprocessedUpload.objects.filter(user=request.user)
-    files = FITSFile.objects.filter(uploaded_by=request.user).exclude(process_status='COMPLETE')
+    unprocessed = UnprocessedUpload.objects.filter(user=request.user).order_by('upload_time')
+    files = FITSFile.objects.filter(uploaded_by=request.user).exclude(process_status='COMPLETE').order_by('upload_time')
 
     return render(request, "base_process.html", {'unprocessed': unprocessed, 'files': files})
 
@@ -52,10 +54,11 @@ def process_header(request, uuid):
     """
 
     REQUIRED_HEADER_KEYS = [
-        'NAXIS1', 'NAXIS2', 'EXPTIME', 'FILTER', 'DATE-OBS'
+        'EXPTIME', 'FILTER', 'DATE-OBS'
     ]
 
     if request.method == "POST":
+        # See if this FITS file actually exists in our database
         try:
             unprocessed_file = UnprocessedUpload.objects.get(uuid=uuid)
         except (ObjectDoesNotExist, ValidationError):
@@ -121,6 +124,7 @@ def process_header(request, uuid):
 
             return redirect('process')
 
+    # See if this FITS file actually exists in our database
     unprocessed_file = get_object_or_404(UnprocessedUpload, uuid=uuid)
 
     # Only users of the file can process the header
@@ -149,6 +153,7 @@ def process_header_modify(request, uuid):
     :return:
     """
 
+    # See if this FITS file actually exists in our database
     try:
         unprocessed_file = UnprocessedUpload.objects.get(uuid=uuid)
     except (ObjectDoesNotExist, ValidationError):
@@ -202,7 +207,11 @@ def process_observation(request):
     """
     file_id = request.GET.get('file_id')
 
-    fits_file = get_object_or_404(FITSFile, pk=file_id)
+    # See if this FITS file actually exists in our database
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except (ObjectDoesNotExist, ValueError):
+        raise Http404
 
     if fits_file.uploaded_by != request.user:
         raise PermissionDenied
@@ -230,7 +239,8 @@ def process_observation(request):
         else:
             return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
     else:
-        form = ObservationForm(user=request.user)
+        form = ObservationForm()
+        form.fields['device'].queryset = ImagingDevice.objects.filter(user=request.user)
 
         return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
 
@@ -245,7 +255,29 @@ def process_astrometry(request):
 
     file_id = request.GET.get('file_id')
 
-    fits_file = get_object_or_404(FITSFile, pk=file_id)
+    # See if this FITS file actually exists in our database
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except (ObjectDoesNotExist, ValueError):
+        raise Http404
+
+    if fits_file.process_status == 'CHECK_ASTROMETRY' and request.method == "POST" and \
+                    request.user == fits_file.uploaded_by:
+        # The results of the user choice whether the action was successful or not.
+
+        # They say it was successful!
+        if request.POST.get('correct') == 'true':
+            fits_file.process_status = 'ASTROMETRY'
+            fits_file.save()
+            return redirect('process')
+        else:
+            # They say it wasn't successful, so set the status to failed on user command
+            fits_file.process_status = 'FAILED_USER'
+            fits_file.save()
+            return redirect('process')
+
+    if fits_file.process_status == 'CHECK_ASTROMETRY':
+        return render(request, "base_process_astrometry.html", {'file': fits_file})
 
     if fits_file.process_status != 'OBSERVATION':
         return render(request, "base_process_ooo.html")
@@ -257,11 +289,11 @@ def process_astrometry(request):
     astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename),
                              str(fits_file.id))
 
-    fits_file.process_status = 'ASTROMETRY'
+    fits_file.process_status = 'CHECK_ASTROMETRY'
 
     fits_file.save()
 
-    return redirect('process')
+    return render(request, "base_process_astrometry.html", {'file': fits_file})
 
 
 @login_required
@@ -274,7 +306,11 @@ def process_photometry(request):
 
     file_id = request.GET.get('file_id')
 
-    fits_file = get_object_or_404(FITSFile, pk=file_id)
+    # See if this FITS file actually exists in our database
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except (ObjectDoesNotExist, ValueError):
+        raise Http404
 
     if fits_file.process_status != 'ASTROMETRY':
         return render(request, "base_process_ooo.html")
@@ -282,6 +318,7 @@ def process_photometry(request):
     if request.user != fits_file.uploaded_by:
         raise PermissionDenied
 
+    # Run the photometry process for this file
     photometry.do_photometry(fits_file.fits_filename, fits_file.id)
 
     fits_file.catalogue_filename = fits_file.fits_filename + '.cat'
@@ -303,21 +340,43 @@ def process_calibration(request):
 
     file_id = request.GET.get('file_id')
 
-    fits_file = get_object_or_404(FITSFile, pk=file_id)
+    # See if this FITS file actually exists in our database
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except (ObjectDoesNotExist, ValueError):
+        raise Http404
 
     if request.user != fits_file.uploaded_by:
         raise PermissionDenied
 
+    if fits_file.process_status == 'CHECK_CALIBRATION' and request.method == "POST" and \
+                    request.user == fits_file.uploaded_by:
+        # The results of the users choice whether the action was successful or not.
+        # The action was successful!
+        if request.POST.get('correct') == 'true':
+            fits_file.process_status = 'COMPLETE'
+            fits_file.save()
+            return redirect('process')
+        else:
+            # Set the action to have failed, by user command
+            fits_file.process_status = 'FAILED_USER'
+            fits_file.save()
+            return redirect('process')
+
+    if fits_file.process_status == 'CHECK_CALIBRATION':
+        return render(request, "base_process_calibration.html", {'file': fits_file})
+
     if fits_file.process_status != 'PHOTOMETRY':
         return render(request, "base_process_ooo.html")
 
+    # Run the calibration process for this file
     calibration.do_calibration(file_id)
 
-    fits_file.process_status = 'COMPLETE'
+    fits_file.process_status = 'CHECK_CALIBRATION'
 
     fits_file.save()
 
-    return redirect('process')
+    return render(request, "base_process_calibration.html", {'file': fits_file})
 
 
 @login_required
@@ -336,10 +395,12 @@ def add_object(request):
             cat_file = request.FILES.get('catfile')
             if not os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']))):
                 path = os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']) + '.cat')
+                # Write the catalog file to disk under the new name
                 with open(path, 'w') as f:
                     f.write(cat_file.read())
                     f.close()
                 form.save()
+                # Give the user a fresh form
                 newform = ObjectForm()
                 return render(request, "base_add_object.html", {'form': newform})
             else:
@@ -365,6 +426,7 @@ def add_device(request):
             device = form.save(commit=False)
             device.user = request.user
             device.save()
+            return redirect('accounts_profile')
         else:
             return render(request, "base_add_device.html", {'form': form})
     else:
@@ -382,12 +444,16 @@ def modify_object(request, id):
     :param id: The ID of the object
     :return:
     """
-    object = get_object_or_404(Object, pk=id)
+    try:
+        object = Object.objects.get(pk=id)
+    except (ObjectDoesNotExist, ValueError):
+        raise Http404
 
     if request.method == "POST":
         form = ObjectForm(request.POST, instance=object)
         if form.is_valid():
             form.save()
+            return redirect('objects')
         else:
             return render(request, "base_add_object.html", {'form': form})
     else:
@@ -413,12 +479,88 @@ def modify_device(request, id):
         form = ImagingDeviceForm(request.POST, instance=imaging_device)
         if form.is_valid():
             form.save()
+            return redirect('accounts_profile')
         else:
             return render(request, "base_add_device.html", {'form': form})
     else:
         form = ImagingDeviceForm(instance=imaging_device)
 
-        return render(request, "base_add_object.html", {'form': form})
+        return render(request, "base_add_device.html", {'form': form})
+
+
+@login_required
+@permission_required('is_staff', raise_exception=True)
+def manage_files(request):
+    """
+    Let administrators manage all uploads that have been made, and delete them/look at them if they have failed
+    :param request:
+    :return:
+    """
+
+    files_list = FITSFile.objects.all().order_by('upload_time').reverse()
+
+    paginator = Paginator(files_list, 100)  # Show 25 contacts per page
+
+    page = request.GET.get('page')
+    try:
+        files = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page.
+        files = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g. 9999), deliver last page of results.
+        files = paginator.page(paginator.num_pages)
+
+    return render(request, "base_manage_files.html", {'files': files})
+
+@login_required
+def delete_file(request, file_id):
+    """
+    Let administrators delete any file, or users delete one of their own files. Will remove all information relating to
+    it on disk and database
+    :param request:
+    :param file_id: The ID of the file
+    :return:
+    """
+
+    if request.method == "POST":
+
+        fits_file = get_object_or_404(FITSFile, pk=file_id)
+
+        if (fits_file.uploaded_by != request.user) and (not request.user.is_staff):
+            raise PermissionDenied
+
+        try:
+            observation = Observation.objects.get(fits=fits_file)
+            photometry_objs = Photometry.objects.filter(observation=observation)
+            for photometry in photometry_objs:
+                photometry.delete()
+
+            observation.delete()
+        except ObjectDoesNotExist:
+            pass  # We don't care if they don't exist, we're deleting them anyway
+
+        # Remove all folders we drop during analysis
+        if os.path.exists(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id))):
+            shutil.rmtree(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id)))
+
+        if os.path.exists(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id))):
+            shutil.rmtree(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
+
+        if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id))):
+            shutil.rmtree(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
+
+        if os.path.exists(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id))):
+            shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))
+
+        # Finally, delete the file from the DB
+        fits_file.delete()
+
+        return render(request, "base_delete_file.html")
+    else:
+        # We don't want users to go directly to this page, they should have to do it via a POST request so they don't
+        # accidentally delete anything
+        raise Http404
 
 
 @login_required
@@ -430,7 +572,21 @@ def accounts_profile(request):
     """
 
     devices = ImagingDevice.objects.filter(user=request.user)
-    processed_files = FITSFile.objects.filter(uploaded_by=request.user).filter(process_status='COMPLETE')
+    processed_files = FITSFile.objects.filter(uploaded_by=request.user)\
+        .filter(Q(process_status='COMPLETE') | Q(process_status='FAILED') | Q(process_status='FAILED_USER'))\
+        .order_by('upload_time').reverse()
+
+    paginator = Paginator(processed_files, 100)
+
+    page = request.GET.get('page')
+    try:
+        processed_files = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page.
+        processed_files = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g. 9999), deliver last page of results.
+        processed_files = paginator.page(paginator.num_pages)
 
     return render(request, "base_accounts_profile.html", {'devices': devices, 'processed_files': processed_files})
 
@@ -446,6 +602,11 @@ def objects(request):
     objects = Object.objects.all()
 
     return render(request, "base_objects.html", {'objects': objects})
+
+
+def test(request):
+
+    return render(request, "base_process_astrometry.html")
 
 
 class UploadView(View):

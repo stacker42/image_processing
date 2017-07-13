@@ -201,6 +201,18 @@ def do_calibration(file_id):
     mag_2[check_edge[0]] = -99
     mage_2[check_edge[0]] = -99
 
+    # determine the maximum usable magnitude for the image
+    binsies = numpy.zeros(80, dtype=numpy.float32).reshape(80)
+    for i in range(0, 80):
+        binsies[i] = i / 4.
+    check = numpy.where(mag_2[:] > 0.0)
+    hist, bin_edges = numpy.histogram(mag_2[check[0]], bins=binsies)
+    max_use = binsies[numpy.argmax(hist)]
+
+    print ' max use #####################'
+    print max_use
+    print '##############################'
+
     # make coordcatalogue for the catalogue
     # cat_2 = ICRS(ra_2, de_2, unit=(u.degree, u.degree))
     cat_2 = SkyCoord(ra_2, de_2, frame='icrs', unit=u.degree)
@@ -294,6 +306,7 @@ def do_calibration(file_id):
                                  + '.png'), format='png',
                     bbox_inches='tight', dpi=600)
         plt.clf()
+
 
         # fill in the main arrays with the data from the catalogue,
         # but only for good matches, and use corrected magnitudes

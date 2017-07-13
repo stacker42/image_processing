@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage all user uploads{% endblock %}
+
+{% block content %}
+
+    <h1>All files and their current status</h1>
+
+    <table class="table table-striped">
+        <tr><th>Name</th><th>Uploaded By</th><th>Current Status</th><th>Uploaded Time</th><th>Action</th></tr>
+        {% for file in files %}
+        <tr><td>{{ file.fits_filename }}</td><td>{{ file.uploaded_by.username }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time }}</td><td>{% if file.process_status == 'FAILED' or file.process_status == 'FAILED_USER' %}<form action="{% url 'delete_file' file.id %}" enctype="multipart/form-data" method="POST">{% csrf_token %}<input type="submit" value="Delete" class="btn btn-danger"></form>{% else %}<button class="btn btn-secondary" disabled>N/A</button>{% endif %}</td></tr>
+        {% endfor %}
+    </table>
+
+    <p>Status explanation</p>
+    <ul>
+        <li>HEADER: User has verified the header</li>
+        <li>OBSERVATION: User has added observation details</li>
+        <li>CHECK_ASTROMETRY: User is checking whether astrometry was successful</li>
+        <li>ASTROMETRY: Astrometry was successful</li>
+        <li>CHECK_PHOTOMETRY: User is checking whether photometry was successful</li>
+        <li>PHOTOMETRY: Photometry was successful</li>
+        <li>CHECK_CALIBRATION: User is checking whether calibration was successful</li>
+        <li>COMPLETE: All analysis stages complete</li>
+        <li>FAILED: Processing failed during execution</li>
+        <li>FAILED_USER: Processing failed because they said it wasn't successful</li>
+    </ul>
+
+    <div class="pagination">
+    <span class="step-links">
+        {% if files.has_previous %}
+            <a href="?page={{ files.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ files.number }} of {{ files.paginator.num_pages }}.
+        </span>
+
+        {% if files.has_next %}
+            <a href="?page={{ files.next_page_number }}">next</a>
+        {% endif %}
+    </span>
+</div>
+
+{% endblock %}
