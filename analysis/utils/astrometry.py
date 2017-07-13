@@ -98,7 +98,7 @@ def do_astrometry(path, file_id):
 
     shutil.move(j(WORKING_DIRECTORY, 'in-new.fits'), path)
 
-    imagemagick_command = ['convert', 'in-objs.png', '-resize', '30%', 'in-objs.jpg']
+    imagemagick_command = ['convert', 'in-objs.png', '-resize', '40%', 'in-objs.jpg']
 
     subprocess.check_output(imagemagick_command)
 

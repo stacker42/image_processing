@@ -290,22 +290,26 @@ def do_calibration(file_id):
 
         rectangle1 = [0.1, 0.1, 0.8, 0.8]
 
-        ax1 = plt.axes(rectangle1)
-        plt.scatter(mag_m[check[0]], mag_m[check[0]] - match_mag[check[0]], s=5, c="black", edgecolor='black',
+        fig = plt.figure()
+        axis1 = fig.add_subplot(211)
+        axis1.scatter(mag_m[check[0]], mag_m[check[0]] - match_mag[check[0]], s=5, c="black", edgecolor='black',
                     alpha=0.8)
-        plt.scatter(mag_m[check[0]], mag_m[check[0]] - fitfunc_cal(param_cal, match_mag[check[0]]), s=5, c="red",
+        axis1.scatter(mag_m[check[0]], mag_m[check[0]] - fitfunc_cal(param_cal, match_mag[check[0]]), s=5, c="red",
                     edgecolor='black', alpha=0.8)
-        plt.scatter(mag_m[check[0]], 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
-        plt.scatter(mag_m[check[0]], med_offset + 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
+        axis1.plot(x, yy, 'b-', lw=2)
+        axis1.plot(x, fitfunc_cal(param_cal, x) - x, 'r-', lw=2)
 
-        plt.plot(x, yy, 'b-', lw=2)
-        plt.plot(x, fitfunc_cal(param_cal, x) - x, 'r-', lw=2)
+
+        axis2 = fig.add_subplot(212)
+        axis2.scatter(mag_m[check[0]], 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
+        axis2.scatter(mag_m[check[0]], med_offset + 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
+
         # plt.show()
         # save the calibration plot
-        plt.savefig(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id), 'calibrationb_' + fits_file.fits_filename
+        fig.savefig(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id), 'calibrationb_' + fits_file.fits_filename
                                  + '.png'), format='png',
                     bbox_inches='tight', dpi=600)
-        plt.clf()
+        fig.clf()
 
 
         # fill in the main arrays with the data from the catalogue,

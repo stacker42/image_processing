@@ -13,11 +13,11 @@ from django.http import Http404
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
+from django.db.models import Q
 from forms import UploadFileForm, ObjectForm, ObservationForm, HeaderForm, ImagingDeviceForm
 from models import *
 from utils import fits, upload, astrometry, photometry, calibration
 import pyfits
-from django.db.models import Q
 
 
 @login_required
@@ -513,6 +513,7 @@ def manage_files(request):
 
     return render(request, "base_manage_files.html", {'files': files})
 
+
 @login_required
 def delete_file(request, file_id):
     """
@@ -633,13 +634,12 @@ class UploadView(View):
             else:
                 return upload.make_response(status=400,
                                             content=json.dumps({
-                                               'success': False,
-                                               'error': 'Invalid file'
-                                           }))
+                                                        'success': False,
+                                                        'error': 'Invalid file'
+                                                    }))
         else:
             return upload.make_response(status=400,
                                         content=json.dumps({
-                    'success': False,
-                    'error': '%s' % repr(form.errors)
-                }))
-
+                                                    'success': False,
+                                                    'error': '%s' % repr(form.errors)
+                                                }))
