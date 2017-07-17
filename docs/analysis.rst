@@ -28,6 +28,14 @@ analysis\.apps module
     :undoc-members:
     :show-inheritance:
 
+analysis\.context\_processors module
+------------------------------------
+
+.. automodule:: analysis.context_processors
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 analysis\.forms module
 ----------------------
 

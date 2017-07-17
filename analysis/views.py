@@ -14,7 +14,7 @@ from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from django.db.models import Q
-from forms import UploadFileForm, ObjectForm, ObservationForm, HeaderForm, ImagingDeviceForm
+from forms import *
 from models import *
 from utils import fits, upload, astrometry, photometry, calibration
 import pyfits
@@ -48,7 +48,12 @@ def process_header(request, uuid):
     """
     Lets the user check the header information in a given file, based on UUID
     User has the option to delete the file, if the header is not correct, or
-    to proceed onto the next stage
+    to proceed onto the next stage.
+
+    Also checks if a file has already been uploaded by checking SHA256 hashes. Note: This checks the original hash
+    from upload and not from the current file which may have been modified by the platform, and therefore have a
+    different hash.
+
     :param uuid: The UUID of the file to check
     :return:
     """
@@ -112,6 +117,8 @@ def process_header(request, uuid):
 
             fits_file.fits_filename = unprocessed_file.filename
 
+            fits_file.sha256 = unprocessed_file.sha256
+
             fits_file.save()
 
             # Seeing as we don't need the reference to the unprocessed file any more, delete it.
@@ -130,6 +137,13 @@ def process_header(request, uuid):
     # Only users of the file can process the header
     if unprocessed_file.user != request.user:
         raise PermissionDenied
+
+    fits_hashes = FITSFile.objects.values_list('sha256', flat=True)
+
+    # Check if the file already exists on the system, and if it does, don't let the user go any furthur
+    # (make them delete the file)
+    if unprocessed_file.sha256 in fits_hashes:
+        return render(request, "base_process_duplicate.html", {'uuid': uuid})
 
     hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid),
                                              unprocessed_file.filename))
@@ -199,13 +213,12 @@ def process_header_modify(request, uuid):
 
 
 @login_required
-def process_observation(request):
+def process_observation(request, file_id):
     """
     Let the user enter the details of their observation
     :param request:
     :return:
     """
-    file_id = request.GET.get('file_id')
 
     # See if this FITS file actually exists in our database
     try:
@@ -246,14 +259,12 @@ def process_observation(request):
 
 
 @login_required
-def process_astrometry(request):
+def process_astrometry(request, file_id):
     """
     Run the astrometry process for a particular file based on its ID
     :param request:
     :return:
     """
-
-    file_id = request.GET.get('file_id')
 
     # See if this FITS file actually exists in our database
     try:
@@ -297,14 +308,12 @@ def process_astrometry(request):
 
 
 @login_required
-def process_photometry(request):
+def process_photometry(request, file_id):
     """
     Run the photometry prpcess for a particular file based on its ID
     :param request:
     :return:
     """
-
-    file_id = request.GET.get('file_id')
 
     # See if this FITS file actually exists in our database
     try:
@@ -331,14 +340,12 @@ def process_photometry(request):
 
 
 @login_required
-def process_calibration(request):
+def process_calibration(request, file_id):
     """
     Run the calibration for a particular file based on its ID
     :param request:
     :return:
     """
-
-    file_id = request.GET.get('file_id')
 
     # See if this FITS file actually exists in our database
     try:
@@ -364,19 +371,62 @@ def process_calibration(request):
             return redirect('process')
 
     if fits_file.process_status == 'CHECK_CALIBRATION':
-        return render(request, "base_process_calibration.html", {'file': fits_file})
+        form = RedoCalibrationForm()
+        return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
 
     if fits_file.process_status != 'PHOTOMETRY':
         return render(request, "base_process_ooo.html")
 
     # Run the calibration process for this file
-    calibration.do_calibration(file_id)
+    calibration.do_calibration(file_id, min_use=0, max_use=0)
 
     fits_file.process_status = 'CHECK_CALIBRATION'
 
     fits_file.save()
 
-    return render(request, "base_process_calibration.html", {'file': fits_file})
+    form = RedoCalibrationForm()
+    return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
+
+
+@login_required
+def process_calibration_retry(request, file_id):
+
+    # See if this FITS file actually exists in our database
+    try:
+        fits_file = FITSFile.objects.get(pk=file_id)
+    except (ObjectDoesNotExist, ValueError):
+        raise Http404
+
+    if request.user != fits_file.uploaded_by:
+        raise PermissionDenied
+
+    if fits_file.process_status == 'CHECK_CALIBRATION' and request.method == "POST" and \
+                    request.user == fits_file.uploaded_by:
+        # User is giving us some parameters to retry the calibration with.
+        form = RedoCalibrationForm(request.POST)
+
+        if form.is_valid():
+
+            # Get rid of the earlier graph
+            if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id))):
+                shutil.rmtree(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
+
+            observation = Observation.objects.get(fits=fits_file)
+            Photometry.objects.filter(observation=observation).delete()
+
+            calibration.do_calibration(file_id, max_use=form.cleaned_data['max_use'],
+                                       min_use=form.cleaned_data['min_use'])
+
+            fits_file.process_status = 'CHECK_CALIBRATION'
+
+            fits_file.save()
+
+            return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
+        else:
+            return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
+    else:
+        #redirect('process_calibration')
+        return redirect('process_calibration', file_id=file_id)
 
 
 @login_required
@@ -533,10 +583,7 @@ def delete_file(request, file_id):
 
         try:
             observation = Observation.objects.get(fits=fits_file)
-            photometry_objs = Photometry.objects.filter(observation=observation)
-            for photometry in photometry_objs:
-                photometry.delete()
-
+            Photometry.objects.filter(observation=observation).delete()
             observation.delete()
         except ObjectDoesNotExist:
             pass  # We don't care if they don't exist, we're deleting them anyway

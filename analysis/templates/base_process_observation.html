@@ -4,10 +4,10 @@
 
 {% block content %}
 
-    <form method="POST" action="{% url 'process_observation' %}?file_id={{ file_id }}" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <input type="submit" value="Enter details into database" class="btn btn-success">
+    <form method="POST" action="{% url 'process_observation' file_id %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Enter details into database" class="btn btn-success">
     </form>
 
 {% endblock %}

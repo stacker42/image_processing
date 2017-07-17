@@ -10,6 +10,12 @@ Welcome to HOYS-CAPS Upload's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   installation
+
+   analysis
+
+   analysis.utils
+
 
 
 Indices and tables

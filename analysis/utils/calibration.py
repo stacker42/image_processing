@@ -66,7 +66,7 @@ def array_format(myarray, arr_format):
     return string
 
 
-def do_calibration(file_id):
+def do_calibration(file_id, max_use, min_use):
     """
     Run the calibration on a particular file in the database. Put the calibrated magnitudes back into the database, and
     also write them out to a file.
@@ -79,8 +79,6 @@ def do_calibration(file_id):
 
     mastercat = ascii.read(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number) + '.cat'))
 
-    max_use = observation.target.max_use  # maximum magnitude used to calibrate frames into each others system
-    min_use = 0  # minimum magnitude used to calibrate frames into each others system
     edge_dist = 10
     # the calibration offset to get instrumental into apparent mag
     # needs to be calculated at some stage, start with defining it
@@ -201,13 +199,25 @@ def do_calibration(file_id):
     mag_2[check_edge[0]] = -99
     mage_2[check_edge[0]] = -99
 
-    # determine the maximum usable magnitude for the image
-    binsies = numpy.zeros(80, dtype=numpy.float32).reshape(80)
-    for i in range(0, 80):
-        binsies[i] = i / 4.
-    check = numpy.where(mag_2[:] > 0.0)
-    hist, bin_edges = numpy.histogram(mag_2[check[0]], bins=binsies)
-    max_use = binsies[numpy.argmax(hist)]
+    if max_use == 0:
+        # determine the maximum usable magnitude for the image
+        binsies = numpy.zeros(80, dtype=numpy.float32).reshape(80)
+        for i in range(0, 80):
+            binsies[i] = i / 4.
+        check = numpy.where(mag_2[:] > 0.0)
+        hist, bin_edges = numpy.histogram(mag_2[check[0]], bins=binsies)
+        max_use = binsies[numpy.argmax(hist)]
+        print '#### hist'
+        print hist
+        print '#### binsies'
+        print binsies
+        print '#### bin_edge'
+        print bin_edges
+        print '########'
+
+    if min_use == 0:
+        check = numpy.where((flag_2[:] == 0) & (mag_2[:] > -50))
+        min_use = numpy.min(mag_2[check[0]])
 
     print ' max use #####################'
     print max_use
@@ -234,12 +244,12 @@ def do_calibration(file_id):
     match_fwhm = fwhm_2[idx]
     match_flag = flag_2[idx]
     match_edge = edge_2[idx]
-    match_d2d = d2d
+    match_d2d = d2d.arcsec
 
     # take the matches within a given distance (no flags) and determine photometry
     # offset of catalogue to master table
-    check = numpy.where((mag_m > min_use) & (mag_m < max_use) & (numpy.absolute(dra) < POS_OFFSET) & (
-        numpy.absolute(dde) < POS_OFFSET) & (flag_m == 0) & (match_flag == 0) & ((mag_m - match_mag) < 5.))
+    check = numpy.where((match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET)
+                        & (flag_m == 0) & (match_flag == 0))
 
     # check=numpy.where( (numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET ) & (flag_m <= 8) &
     # (match_flag <= 8))
@@ -250,11 +260,7 @@ def do_calibration(file_id):
 
     # do the fitting
     # but remove outliers +-0.3mag based on the above med_offset
-    check = numpy.where(
-        (numpy.absolute(mag_m - match_mag - med_offset) < 0.3) & (mag_m > min_use) & (mag_m < max_use) & (
-            numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET) & (flag_m == 0) & (
-            match_flag == 0) & (
-            (mag_m - match_mag) < 5.))
+    check = numpy.where((match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET) & (flag_m == 0) & (match_flag == 0))
 
     # for photofunction + 4th order polynomial fit
     parameters = [med_offset, 0, 0, 0, 0, 0, 0, 0]
@@ -264,11 +270,11 @@ def do_calibration(file_id):
 
     print "use ", numbers_fit, " stars for photometry fit"
     # only fit if there are enough stars for fit, i.e. 5
-    if (numbers_fit > 5):
+    if numbers_fit > 5:
 
         # order the mags to median filter the M vs delta_M plot
-        order = numpy.argsort(mag_m[check[0]])
-        x = mag_m[check[0]][order]
+        order = numpy.argsort(match_mag[check[0]])
+        x = match_mag[check[0]][order]
         y = mag_m[check[0]][order] - match_mag[check[0]][order]
         yy = y
         for i in range(0, len(y)):
@@ -288,33 +294,91 @@ def do_calibration(file_id):
 
         os.mkdir(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
 
-        rectangle1 = [0.1, 0.1, 0.8, 0.8]
-
         fig = plt.figure()
         axis1 = fig.add_subplot(211)
-        axis1.scatter(mag_m[check[0]], mag_m[check[0]] - match_mag[check[0]], s=5, c="black", edgecolor='black',
-                    alpha=0.8)
-        axis1.scatter(mag_m[check[0]], mag_m[check[0]] - fitfunc_cal(param_cal, match_mag[check[0]]), s=5, c="red",
-                    edgecolor='black', alpha=0.8)
+
+        # MedFilter line plot
         axis1.plot(x, yy, 'b-', lw=2)
+        # Fit function line plot
         axis1.plot(x, fitfunc_cal(param_cal, x) - x, 'r-', lw=2)
 
+        print 'fitfunc #########'
+        print fitfunc_cal(param_cal, x)
+        print '####################'
+
+        # 0 line of blue dots
+        axis1.scatter(match_mag[check[0]], med_offset + 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
+
+        # Original data plot scatter
+        axis1.scatter(match_mag[check[0]], mag_m[check[0]] - match_mag[check[0]], s=5, c="black", edgecolor='black',
+                    alpha=0.8)
+        # Max use line
+        axis1.axvline(x=max_use, c='green', label='max_use')
+
+        # Min use line
+        axis1.axvline(x=min_use, c='yellow', label='min_use')
+
+        ylim_min = numpy.min(mag_m[check[0]] - match_mag[check[0]]) - 0.05 - med_offset
+
+        ylim_max = numpy.max(mag_m[check[0]] - match_mag[check[0]]) + 0.05 - med_offset
+
+        if ylim_min < -0.5:
+            ylim_min = -0.5 + med_offset
+
+        if ylim_max > 0.5:
+            ylim_max = 0.5 + med_offset
+
+
+        axis1.set_ylim((ylim_min, ylim_max))
 
         axis2 = fig.add_subplot(212)
-        axis2.scatter(mag_m[check[0]], 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
-        axis2.scatter(mag_m[check[0]], med_offset + 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
 
-        # plt.show()
+        # Calibrated magnitudes
+        cal_mag = fitfunc_cal(param_cal, match_mag[:])
+
+        # Zero line of blue dots
+        axis2.scatter(cal_mag[check[0]], 0 * cal_mag[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
+
+        # Conditions for the dots to be plotted - magnitude less than 30 but greater than 5
+        check_plot = numpy.where((cal_mag[:] < 30) & (cal_mag[:] > 5))
+
+        # Scatter plot of calibrated magnitudes (no restriction)
+        axis2.scatter(cal_mag[check_plot[0]], mag_m[check_plot[0]] - cal_mag[check_plot[0]], s=1, c="black",
+                    edgecolor='black', alpha=0.8)
+
+        # Scatter plot of calibrated magnitudes (restricted to those between max_use and min_use)
+        axis2.scatter(cal_mag[check[0]], mag_m[check[0]] - cal_mag[check[0]], s=5, c="red",
+                    edgecolor='black', alpha=0.8)
+
+
+        # Max use line
+        axis2.axvline(x=fitfunc_cal(param_cal, max_use), c='green', label='max_use')
+
+        # Min use line
+        axis2.axvline(x=fitfunc_cal(param_cal, min_use), c='yellow', label='min_use')
+
+        ylim_min = numpy.min(mag_m[check[0]] - cal_mag[check[0]]) - 0.05
+
+        ylim_max = numpy.max(mag_m[check[0]] - cal_mag[check[0]]) + 0.05
+
+        if ylim_min < -0.5:
+            ylim_min = -0.5
+
+        if ylim_max > 0.5:
+            ylim_max = 0.5
+
+        axis2.set_xlim((numpy.min(cal_mag[check[0]]) - 0.5, numpy.max(cal_mag[check[0]]) + 0.5))
+        axis2.set_ylim((ylim_min, ylim_max))
+
         # save the calibration plot
         fig.savefig(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id), 'calibrationb_' + fits_file.fits_filename
-                                 + '.png'), format='png',
-                    bbox_inches='tight', dpi=600)
+                                 + '.png'), format='png', bbox_inches='tight', dpi=600)
         fig.clf()
 
 
         # fill in the main arrays with the data from the catalogue,
         # but only for good matches, and use corrected magnitudes
-    check = numpy.where((numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET))
+    check = numpy.where((match_d2d < POS_OFFSET))
 
     # if the fit has been done
     if numbers_fit > 5:
@@ -322,7 +386,7 @@ def do_calibration(file_id):
         # for the uncertainties we calculate the scatter of the matched stars with similar magnitude
         for i in check[0]:
             # select all stars within 1mag of star
-            checkerr = numpy.where((numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET) & (
+            checkerr = numpy.where((match_d2d < POS_OFFSET) & (
                 mag_array[:] > 1.) & (numpy.abs(mag_array[i] - mag_array[:]) > 0) & (
                                        numpy.abs(mag_array[i] - mag_array[:]) < 0.5))
             # calculate the rms of these

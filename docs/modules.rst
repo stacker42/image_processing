@@ -1,9 +1,9 @@
-astro_analysis
-==============
+image_processing
+================
 
 .. toctree::
    :maxdepth: 4
 
    analysis
-   astro_analysis
+   image_processing
    manage

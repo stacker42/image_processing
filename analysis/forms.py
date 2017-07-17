@@ -46,3 +46,8 @@ class ImagingDeviceForm(forms.ModelForm):
         model = ImagingDevice
         fields = ('name', 'scale')
         labels = {'name': 'Name of your device', 'scale': 'Pixel scale'}
+
+
+class RedoCalibrationForm(forms.Form):
+    max_use = forms.FloatField(initial=0)
+    min_use = forms.FloatField(initial=0)

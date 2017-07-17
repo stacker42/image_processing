@@ -89,8 +89,7 @@ def do_astrometry(path, file_id):
 
     fits.writeto(os.path.join(WORKING_DIRECTORY, 'in.fits'), inhdulist[0].data, inhdulist[0].header)
 
-    solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--scale-units',
-                     'degw', '--scale-low', '' + str(observation.device.scale) + '', '--downsample', '2']
+    solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '4']
 
     subprocess.check_output(solve_command)
 

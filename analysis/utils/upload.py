@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from analysis.models import UnprocessedUpload
 import time
 from analysis.utils.fits import get_header
+import hashlib
 
 def check_valid_file(path, uuid):
     """
@@ -89,6 +90,7 @@ def handle_upload(f, fileattrs, request):
             upload.filename = fileattrs['qqfilename']
             upload.user = request.user
             upload.upload_time = time.time()
+            upload.sha256 = hashlib.sha256(open(dest, 'r').read()).hexdigest()
             upload.save()
         else:
             return False  # not a valid file
@@ -111,8 +113,8 @@ def handle_upload(f, fileattrs, request):
             upload.filename = fileattrs['qqfilename']
             upload.user = request.user
             upload.upload_time = time.time()
+            upload.sha256 = hashlib.sha256(open(os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']), 'r').read()).hexdigest()
             upload.save()
-
 
             shutil.rmtree(os.path.dirname(os.path.dirname(dest)))
         else:

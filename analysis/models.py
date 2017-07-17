@@ -170,6 +170,7 @@ class FITSFile(models.Model):
     uploaded_by = models.ForeignKey(User)
     upload_time = models.IntegerField()
     header = models.CharField(max_length=10000)
+    sha256 = models.CharField(max_length=64)
 
     class Meta:
         db_table = "fits_files"
@@ -184,6 +185,7 @@ class UnprocessedUpload(models.Model):
     filename = models.FilePathField()
     user = models.ForeignKey(User)
     upload_time = models.IntegerField()
+    sha256 = models.CharField(max_length=64)
 
     class Meta:
         db_table = "unprocessed_uploads"
