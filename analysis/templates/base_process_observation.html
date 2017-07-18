@@ -4,6 +4,8 @@
 
 {% block content %}
 
+    <h1>Add observation details</h1>
+
     <form method="POST" action="{% url 'process_observation' file_id %}" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}

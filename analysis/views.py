@@ -16,8 +16,9 @@ from django.views.generic import View
 from django.db.models import Q
 from forms import *
 from models import *
-from utils import fits, upload, astrometry, photometry, calibration
+from utils import fits, upload, astrometry, photometry, calibration, general
 import pyfits
+from astropy.time import Time
 
 
 @login_required
@@ -37,179 +38,9 @@ def process(request):
     :param request:
     :return:
     """
-    unprocessed = UnprocessedUpload.objects.filter(user=request.user).order_by('upload_time')
     files = FITSFile.objects.filter(uploaded_by=request.user).exclude(process_status='COMPLETE').order_by('upload_time')
 
-    return render(request, "base_process.html", {'unprocessed': unprocessed, 'files': files})
-
-
-@login_required
-def process_header(request, uuid):
-    """
-    Lets the user check the header information in a given file, based on UUID
-    User has the option to delete the file, if the header is not correct, or
-    to proceed onto the next stage.
-
-    Also checks if a file has already been uploaded by checking SHA256 hashes. Note: This checks the original hash
-    from upload and not from the current file which may have been modified by the platform, and therefore have a
-    different hash.
-
-    :param uuid: The UUID of the file to check
-    :return:
-    """
-
-    REQUIRED_HEADER_KEYS = [
-        'EXPTIME', 'FILTER', 'DATE-OBS'
-    ]
-
-    if request.method == "POST":
-        # See if this FITS file actually exists in our database
-        try:
-            unprocessed_file = UnprocessedUpload.objects.get(uuid=uuid)
-        except (ObjectDoesNotExist, ValidationError):
-            raise Http404
-
-        if request.POST.get('delete') == "true":
-            # Don't let other users delete files they didn't upload!
-            if unprocessed_file.user == request.user:
-                unprocessed_file.delete()
-                upload.handle_deleted_file(str(uuid))
-
-                return redirect('home')
-            else:
-                raise PermissionDenied
-        else:
-            # Need to add the files to the database
-            # First lets check that the user has permission to work with this file
-            if not request.user == unprocessed_file.user:
-                raise PermissionDenied
-
-            inhdulist = fits.get_hdu_list(
-                os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid), unprocessed_file.filename))
-
-            if not set(REQUIRED_HEADER_KEYS).issubset(inhdulist[0].header.keys()):
-                    return render(request, "base_process_header.html", {'header': repr(inhdulist[0].header),
-                                                                        'uuid': str(unprocessed_file.uuid),
-                                                                        'missing_key': True,
-                                                                        'required': REQUIRED_HEADER_KEYS})
-
-            header = {}
-
-            # Iterate through all the header values and add these to a dictionary
-            for key, value in zip(inhdulist[0].header.keys(), inhdulist[0].header.values()):
-                header[key] = value
-
-            fits_file = FITSFile()
-
-            fits_file.header = json.dumps(header)
-            fits_file.fits_filename = ''
-            fits_file.catalog_filename = ''
-            fits_file.uploaded_by = unprocessed_file.user
-            fits_file.upload_time = unprocessed_file.upload_time
-
-            fits_file.save()
-
-            # Make a new directory for the file and put it into this new directory.
-            os.mkdir(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
-            shutil.move(os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid), unprocessed_file.filename),
-                        os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), unprocessed_file.filename))
-            upload.handle_deleted_file(str(unprocessed_file.uuid))
-
-            fits_file.fits_filename = unprocessed_file.filename
-
-            fits_file.sha256 = unprocessed_file.sha256
-
-            fits_file.save()
-
-            # Seeing as we don't need the reference to the unprocessed file any more, delete it.
-            unprocessed_file.delete()
-
-            # Set the current stage of the processing
-            fits_file.process_status = 'HEADER'
-
-            fits_file.save()
-
-            return redirect('process')
-
-    # See if this FITS file actually exists in our database
-    unprocessed_file = get_object_or_404(UnprocessedUpload, uuid=uuid)
-
-    # Only users of the file can process the header
-    if unprocessed_file.user != request.user:
-        raise PermissionDenied
-
-    fits_hashes = FITSFile.objects.values_list('sha256', flat=True)
-
-    # Check if the file already exists on the system, and if it does, don't let the user go any furthur
-    # (make them delete the file)
-    if unprocessed_file.sha256 in fits_hashes:
-        return render(request, "base_process_duplicate.html", {'uuid': uuid})
-
-    hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid),
-                                             unprocessed_file.filename))
-
-    header_text = repr(hdulist[0].header)
-
-    if not set(REQUIRED_HEADER_KEYS).issubset(hdulist[0].header.keys()):
-        return render(request, "base_process_header.html", {'header': header_text,
-                                                            'uuid': str(unprocessed_file.uuid),
-                                                            'missing_key': True, 'required': REQUIRED_HEADER_KEYS})
-
-    return render(request, "base_process_header.html", {'header': header_text, 'uuid': str(unprocessed_file.uuid),
-                                                        'missing_key': False})
-
-
-def process_header_modify(request, uuid):
-    """
-    Modify (or ideally add) the required header cards to the FITS file so we'll be able to analyse it
-    :param request:
-    :param uuid: The UUID of the FITS file
-    :return:
-    """
-
-    # See if this FITS file actually exists in our database
-    try:
-        unprocessed_file = UnprocessedUpload.objects.get(uuid=uuid)
-    except (ObjectDoesNotExist, ValidationError):
-        raise Http404
-
-    if request.method == "POST":
-        # make changes to the file
-        form = HeaderForm(request.POST)
-        if form.is_valid():
-            inhdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, uuid, unprocessed_file.filename))
-
-            for k in form.cleaned_data.keys():
-                inhdulist[0].header[k.replace('_', '-')] = form.cleaned_data[k]
-
-            pyfits.update(os.path.join(settings.UPLOAD_DIRECTORY, uuid, unprocessed_file.filename),
-                           inhdulist[0].data, inhdulist[0].header)
-
-            print 'about to redirect'
-
-            return redirect('process_header', uuid=uuid)
-
-        else:
-            return render(request, "base_process_headerextra.html", {'form': form})
-    else:
-        inhdulist = fits.get_hdu_list(
-            os.path.join(settings.UPLOAD_DIRECTORY, str(unprocessed_file.uuid), unprocessed_file.filename))
-
-        header = inhdulist[0].header
-
-        initial_values = {'EXPTIME': '', 'DATE-OBS': '', 'FILTER': ''}
-
-        # Add initial values to the form, if they exist in the header (and its likely that at least one won't)
-        for k in initial_values.keys():
-            try:
-                # We replace here as we can't use hyphens in Python variable names
-                initial_values[k.replace('-', '_')] = header[k]
-            except KeyError:
-                initial_values[k.replace('-', '_')] = ''
-
-        form = HeaderForm(initial=initial_values)
-
-        return render(request, "base_process_headerextra.html", {'form': form})
+    return render(request, "base_process.html", {'files': files})
 
 
 @login_required
@@ -229,7 +60,12 @@ def process_observation(request, file_id):
     if fits_file.uploaded_by != request.user:
         raise PermissionDenied
 
-    if fits_file.process_status != 'HEADER':
+    # Let the user sort out their header cards for the device they are using if they go here
+    # (We don't want a seperate header cards button when this will be a rare thing)
+    if fits_file.process_status == 'DEVICESETUP':
+        redirect('process_devicesetup', file_id=file_id)
+
+    if fits_file.process_status != 'UPLOADED':
         return render(request, "base_process_ooo.html")
 
     if request.method == "POST":
@@ -238,17 +74,19 @@ def process_observation(request, file_id):
             obs = form.save(commit=False)
             obs.user = request.user
             obs.fits = fits_file
-
-            h = json.loads(fits_file.header)
-
-            obs.time = h['DATE-OBS']
-            obs.filter = h['FILTER']
             obs.save()
 
             fits_file.process_status = 'OBSERVATION'
             fits_file.save()
 
-            return redirect('process')
+            observations = Observation.objects.filter(device=form.cleaned_data['device'])
+
+            if len(observations) > 1:
+                return redirect('process')
+            else:
+                fits_file.process_status = 'DEVICESETUP'
+                fits_file.save()
+                return redirect('process_devicesetup', file_id=file_id)
         else:
             return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
     else:
@@ -259,10 +97,214 @@ def process_observation(request, file_id):
 
 
 @login_required
+def process_devicesetup(request, file_id):
+    """
+    Let the user set up some header card settings for the device if they haven't done it before
+    :param request:
+    :param device_id: The ID of the device
+    :param file_id: The ID of the file we are working on
+    :return:
+    """
+
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
+
+    if fits_file.uploaded_by != request.user:
+        raise PermissionDenied
+
+    if fits_file.process_status != 'DEVICESETUP':
+        return render(request, "base_process_ooo.html")
+
+    # Get the observation corresponding to our FITS file
+    observation = get_object_or_404(Observation, fits=fits_file)
+
+    observations = Observation.objects.filter(device=observation.device)
+
+    device = observation.device
+
+    if len(observations) > 1:
+        # In case the user decides to close their browser and use another file for device setup, then we need to free
+        # this one from being used in the device setup stage
+        fits_file.process_status = 'OBSERVATION'
+        fits_file.save()
+        return redirect('process')
+
+    if request.method == 'POST':
+        form = HeaderKeyChoiceForm(request.POST)
+        device.filter_card = form.data['filter']
+        device.date_card = form.data['date']
+        device.exptime_card = form.data['exposure_time']
+        device.date_format = form.data['date_format']
+        device.save()
+
+        # Okay now we can make it look like we've finished sorting out the observation
+        fits_file.process_status = 'OBSERVATION'
+        fits_file.save()
+
+        return redirect('process')
+
+    hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid),
+                                             fits_file.fits_filename))
+
+    form = HeaderKeyChoiceForm()
+    hdulist[0].header['NONE'] = 'NONE'
+    # Set up the choices of all the header keys. These need to be in a tuple :(
+    choices = tuple(zip(hdulist[0].header.keys(), hdulist[0].header.keys()))
+
+    # The form by default has no values for the choices, so add them here
+    form.fields['date'].choices = choices
+    form.fields['filter'].choices = choices
+    form.fields['exposure_time'].choices = choices
+
+    return render(request, "base_process_devicesetup.html", {'form': form})
+
+
+@login_required
+def process_header(request, file_id):
+    """
+    Lets the user check the header information in a given file, based on UUID
+    User has the option to delete the file, if the header is not correct, or
+    to proceed onto the next stage.
+
+    Also checks if a file has already been uploaded by checking SHA256 hashes. Note: This checks the original hash
+    from upload and not from the current file which may have been modified by the platform, and therefore have a
+    different hash.
+
+    :param uuid: The UUID of the file to check
+    :return:
+    """
+
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
+
+    if not request.user == fits_file.uploaded_by:
+        raise PermissionDenied
+
+    if request.method == "POST":
+
+        if request.POST.get('delete') == "true":
+            upload.handle_deleted_file(str(fits_file.uuid))
+            observation = Observation.objects.get(fits=fits_file)
+            observation.delete()
+            fits_file.delete()
+
+            return redirect('home')
+        else:
+            # Need to set some information for the observation
+            # First lets check that the user has permission to work with this file
+
+            inhdulist = fits.get_hdu_list(
+                os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
+
+            observation = Observation.objects.get(fits=fits_file)
+            device = observation.device
+
+            # Convert whatever format the date is in the header to Julian
+            date = Time(inhdulist[0].header[device.date_card])
+            observation.date = date.jd
+
+            observation.exptime = inhdulist[0].header[device.exptime_card]
+            observation.filter = inhdulist[0].header[device.filter_card]
+
+            general.process_header_db(inhdulist, fits_file)
+            return redirect('process')
+
+    # Only users of the file can process the header
+    if fits_file.uploaded_by != request.user:
+        raise PermissionDenied
+
+    fits_hashes = FITSFile.objects.values('sha256').exclude(id=fits_file.id)
+
+    # Check if the file already exists on the system, and if it does, don't let the user go any furthur
+    # (make them delete the file)
+    if fits_file.sha256 in fits_hashes:
+       return render(request, "base_process_duplicate.html", {'fits_file': fits_file})
+
+    hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid),
+                                             fits_file.fits_filename))
+
+    header_text = repr(hdulist[0].header)
+
+    observation = Observation.objects.get(fits=fits_file)
+    device = observation.device
+
+    valid = True
+
+    try:
+        dateval = hdulist[0].header[device.date_card]
+    except KeyError:
+        # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
+        valid = False
+        dateval = ''
+    try:
+        exptimeval = hdulist[0].header[device.exptime_card]
+    except KeyError:
+        # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
+        valid = False
+        exptimeval = ''
+
+    try:
+        filterval = hdulist[0].header[device.filter_card]
+    except KeyError:
+        # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
+        valid = False
+        filterval = ''
+
+    return render(request, "base_process_header.html", {'header': header_text, 'file_id': file_id, 'device': device,
+                                                        'date': dateval, 'exptime': exptimeval, 'filter': filterval,
+                                                        'valid': valid})
+
+
+def process_header_modify(request, file_id):
+    """
+    Modify (or ideally add) the required header cards to the FITS file so we'll be able to analyse it
+    :param request:
+    :param uuid: The UUID of the FITS file
+    :return:
+    """
+
+    # See if this FITS file actually exists in our database
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
+
+    if not request.user == fits_file.uploaded_by:
+        raise PermissionDenied
+
+    if request.method == "POST":
+        # make changes to the file
+        form = HeaderForm(request.POST)
+        if form.is_valid():
+            # Need to set some information for the observation
+            # First lets check that the user has permission to work with this file
+
+            observation = Observation.objects.get(fits=fits_file)
+
+            # Convert whatever format the date is in the header to Julian
+            date = Time(form.cleaned_data['date'])
+            observation.date = date.jd
+
+            observation.exptime = form.cleaned_data['exptime']
+            observation.filter = form.cleaned_data['filter']
+
+            inhdulist = fits.get_hdu_list(
+                os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
+
+            general.process_header_db(inhdulist, fits_file)
+            return redirect('process')
+        else:
+            return render(request, "base_process_header_modify.html", {'form': form})
+    else:
+        initial_values = {'exptime': request.GET.get('exptime'), 'date': request.GET.get('date'),
+                          'filter': request.GET.get('filter')}
+
+        form = HeaderForm(initial=initial_values)
+
+        return render(request, "base_process_header_modify.html", {'form': form})
+
+
+@login_required
 def process_astrometry(request, file_id):
     """
     Run the astrometry process for a particular file based on its ID
     :param request:
+    :param file_id: The ID of the file we are processing
     :return:
     """
 
@@ -280,6 +322,7 @@ def process_astrometry(request, file_id):
         if request.POST.get('correct') == 'true':
             fits_file.process_status = 'ASTROMETRY'
             fits_file.save()
+            shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))
             return redirect('process')
         else:
             # They say it wasn't successful, so set the status to failed on user command
@@ -312,6 +355,7 @@ def process_photometry(request, file_id):
     """
     Run the photometry prpcess for a particular file based on its ID
     :param request:
+    :param file_id: The ID of the file we are processing
     :return:
     """
 
@@ -344,6 +388,7 @@ def process_calibration(request, file_id):
     """
     Run the calibration for a particular file based on its ID
     :param request:
+    :param file_id: The ID of the file we are processing
     :return:
     """
 
@@ -390,6 +435,12 @@ def process_calibration(request, file_id):
 
 @login_required
 def process_calibration_retry(request, file_id):
+    """
+    Let the user re-try the calibration with different min and max values
+    :param request:
+    :param file_id: The ID of the file we are recalibrating
+    :return:
+    """
 
     # See if this FITS file actually exists in our database
     try:
@@ -425,7 +476,6 @@ def process_calibration_retry(request, file_id):
         else:
             return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
     else:
-        #redirect('process_calibration')
         return redirect('process_calibration', file_id=file_id)
 
 
@@ -578,6 +628,7 @@ def delete_file(request, file_id):
 
         fits_file = get_object_or_404(FITSFile, pk=file_id)
 
+        # Make sure only the user who uploaded it or staff can delete it
         if (fits_file.uploaded_by != request.user) and (not request.user.is_staff):
             raise PermissionDenied
 
@@ -620,9 +671,10 @@ def accounts_profile(request):
     """
 
     devices = ImagingDevice.objects.filter(user=request.user)
+    # Get all the files that have been processed by a user, but only if they have been completed successfully or failed
     processed_files = FITSFile.objects.filter(uploaded_by=request.user)\
         .filter(Q(process_status='COMPLETE') | Q(process_status='FAILED') | Q(process_status='FAILED_USER'))\
-        .order_by('upload_time').reverse()
+        .order_by('-upload_time')
 
     paginator = Paginator(processed_files, 100)
 
@@ -646,15 +698,9 @@ def objects(request):
     :param request:
     :return:
     """
-
     objects = Object.objects.all()
 
     return render(request, "base_objects.html", {'objects': objects})
-
-
-def test(request):
-
-    return render(request, "base_process_astrometry.html")
 
 
 class UploadView(View):

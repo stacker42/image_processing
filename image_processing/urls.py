@@ -24,8 +24,9 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^$', views.home, name="home"),
     url(r'^process/$', views.process, name="process"),
-    url(r'^process/header/(?P<uuid>[0-9A-Za-z_\-]+)/$', views.process_header, name="process_header"),
-    url(r'^process/header/modify/(?P<uuid>[0-9A-Za-z_\-]+)/$', views.process_header_modify,
+    url(r'^process/header/(?P<file_id>[0-9]+)/$', views.process_header, name="process_header"),
+    url(r'^process/devicesetup/(?P<file_id>[0-9]+)/$', views.process_devicesetup, name="process_devicesetup"),
+    url(r'^process/header/modify/(?P<file_id>[0-9]+)/$', views.process_header_modify,
         name="process_header_modify"),
     url(r'^process/observation/(?P<file_id>[0-9]+)/$', views.process_observation, name='process_observation'),
     url(r'^process/astrometry/(?P<file_id>[0-9]+)/$', views.process_astrometry, name='process_astrometry'),
@@ -43,5 +44,4 @@ urlpatterns = [
     url(r'^accounts/', include('registration.backends.default.urls')),
     url(r'^manage/files/$', views.manage_files, name='manage_files'),
     url(r'delete/file/(?P<file_id>[0-9]+)/$', views.delete_file, name='delete_file'),
-    url(r'^test/$', views.test, name='test'),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.ASTROMETRY_URL, document_root='temporary/astrometry/') + static(settings.PLOTS_URL, document_root='data/plots')

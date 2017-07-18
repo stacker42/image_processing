@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add header cards for device{% endblock %}
+
+{% block content %}
+
+    <h1>Set up header cards for your device</h1>
+    <p>It looks like this is the first time you are uploading a file for this device. Please could you select the correct header
+    card for the following information. If there isn't a header card for the information, select NONE.</p>
+
+    <form action="." enctype="multipart/form-data" method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Add header cards to device" class="btn btn-success">
+    </form>
+
+{% endblock %}

@@ -129,7 +129,7 @@
             },
 
             validation: {
-              acceptFiles: 'image/fits,application/fits', allowedExtensions: ['fits', 'fit']
+              acceptFiles: 'image/fits,application/fits', allowedExtensions: ['fits', 'fit', 'fts', 'FTS', 'FITS', 'FIT']
             },
 
 
@@ -152,6 +152,7 @@
                     }
                     node = document.createElement("a");
                     node.href = "{% url 'process' %}";
+                    node.classList = "btn btn-success";
                     node.appendChild(document.createTextNode("Process my uploads"));
                     completedUploadArea.appendChild(node)
                 }

@@ -11,6 +11,7 @@ def do_photometry(filename, file_id):
     :param filename: Name of the file
     :param file_id: The ID of the file
     """
+    # Create our catalogue directory
     if not os.path.exists(os.path.join(settings.CATALOGUE_DIRECTORY, str(file_id))):
         os.mkdir(os.path.join(settings.CATALOGUE_DIRECTORY, str(file_id)))
     sex_command = ['sex', os.path.join(settings.FITS_DIRECTORY, str(file_id), filename), '-c',

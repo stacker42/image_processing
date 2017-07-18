@@ -4,18 +4,6 @@
 
 {% block content %}
 
-    <h1>Check headers</h1>
-
-    {% if unprocessed|length > 0 %}
-        <ul>
-        {% for u in unprocessed %}
-            <li>{{ u.filename }} <a class="btn btn-primary" href="{% url 'process_header' u.uuid %}">Check header</a></li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p>You currently have no files that need to have their headers checked.</p>
-    {% endif %}
-
     <h1>Processing files</h1>
 
     {% if files|length > 0 %}
@@ -23,8 +11,9 @@
         {% for f in files %}
             {% if f.process_status != 'FAILED' and f.process_status != 'FAILED_USER' %}
             <tr><td>[{{f.id }}] {{ f.fits_filename }}</td>
-                <td><a class="btn btn-primary" {% if f.process_status != 'HEADER' %} disabled="true" {% else %} href="{% url 'process_observation' f.id %}" onclick="loading()" {% endif %}>Observation target</a></td>
-                <td><a class="btn btn-primary" {% if f.process_status != 'OBSERVATION' and f.process_status != 'CHECK_ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_astrometry' f.id %}" onclick="loading()" {% endif %}>Astrometry</a></td>
+                <td><a class="btn btn-primary" {% if f.process_status != 'UPLOADED' and f.process_status != 'DEVICESETUP' %} disabled="true" {% else %} href="{% url 'process_observation' f.id %}" onclick="loading()" {% endif %}>Observation target</a></td>
+                <td><a class="btn btn-primary" {% if f.process_status != 'OBSERVATION' %} disabled="true" {% else %} href="{% url 'process_header' f.id %}" onclick="loading()" {% endif %}>Header</a></td>
+                <td><a class="btn btn-primary" {% if f.process_status != 'HEADER' and f.process_status != 'CHECK_ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_astrometry' f.id %}" onclick="loading()" {% endif %}>Astrometry</a></td>
                 <td><a class="btn btn-primary" {% if f.process_status != 'ASTROMETRY' and f.process_status != 'CHECK_PHOTOMETRY' %} disabled="true" {% else %} href="{% url 'process_photometry' f.id %}" onclick="loading()" {% endif %}>Photometry</a></td>
                 <td><a class="btn btn-primary" {% if f.process_status != 'PHOTOMETRY' and f.process_status != 'CHECK_CALIBRATION' %} disabled="true" {% else %} href="{% url 'process_calibration' f.id %}" onclick="loading()" {% endif %}>Calibration</a></td></tr>
             {% endif %}

@@ -32,14 +32,17 @@ def do_astrometry(path, file_id):
     fitscard_naxis1 = 'NAXIS1'  # name of FITS Header Card that contains the number o CCD pixels along axis1
     fitscard_naxis2 = 'NAXIS2'  # name of FITS Header Card that contains the number o CCD pixels along axis2
 
+    # Set up our working directory
     WORKING_DIRECTORY = j(settings.ASTROMETRY_WORKING_DIRECTORY, file_id)
 
+    # Create it if it doesn't exist yet
     if not os.path.exists(WORKING_DIRECTORY):
         os.mkdir(WORKING_DIRECTORY)
-
+    # Use change directory into it
     os.chdir(WORKING_DIRECTORY)
 
-    sys.path.append(settings.ASTROMETRY_BINARY_PATH)  # Add the astrometry.net binaries to our PATH
+    if settings.ASTROMETRY_BINARY_PATH not in sys.path:
+        sys.path.append(settings.ASTROMETRY_BINARY_PATH)  # Add the astrometry.net binaries to our PATH
 
     # open the file
     inhdulist = fits.open(path)
@@ -57,9 +60,6 @@ def do_astrometry(path, file_id):
 
     # the CRVAL keywords need to be calculated
     # get the ra values
-    checktarget = 0.0
-    rac = 0.0
-    decc = 0.0
     ra = observation.target.ra
     ra = ra.split(' ')
     ra1 = float(ra[0])
@@ -71,7 +71,6 @@ def do_astrometry(path, file_id):
     de1 = float(de[0])
     de2 = float(de[1])
     de3 = float(de[2])
-    # print de1, de2, de3
     # get the sign for dec and make it a multiplier
     sign = de[0][0]
     if sign == "+":
@@ -89,18 +88,21 @@ def do_astrometry(path, file_id):
 
     fits.writeto(os.path.join(WORKING_DIRECTORY, 'in.fits'), inhdulist[0].data, inhdulist[0].header)
 
-    solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '4']
+    # Actually solve the image using the astrometry.net solve-field command
+    # We downsample and guess field to try and speed things up a bit. Don't go lower than 2 - causes problems
+    solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '2']
 
     subprocess.check_output(solve_command)
 
-    shutil.move(j(WORKING_DIRECTORY, "in.new"), j(WORKING_DIRECTORY, 'in-new.fits'))
+    # Move our solved image to the location of the exiting image
+    shutil.move(j(WORKING_DIRECTORY, "in.new"), path)
 
-    shutil.move(j(WORKING_DIRECTORY, 'in-new.fits'), path)
-
+    # Make a JPEG that we can show the user in their browser
     imagemagick_command = ['convert', 'in-objs.png', '-resize', '40%', 'in-objs.jpg']
 
     subprocess.check_output(imagemagick_command)
 
+    # Change back to our Django base directory as we're going to delete this one soon
     os.chdir(settings.BASE_DIR)
 
     # # Cleanup files we made earlier

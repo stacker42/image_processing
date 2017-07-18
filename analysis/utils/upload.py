@@ -3,10 +3,11 @@ import os.path
 import shutil
 from django.conf import settings
 from django.http import HttpResponse
-from analysis.models import UnprocessedUpload
+from analysis.models import FITSFile
 import time
 from analysis.utils.fits import get_header
 import hashlib
+
 
 def check_valid_file(path, uuid):
     """
@@ -85,12 +86,13 @@ def handle_upload(f, fileattrs, request):
         # If the file is whole, then put its information into the database, and save it
         save_upload(f, dest)
         if check_valid_file(dest, fileattrs['qquuid']):
-            upload = UnprocessedUpload()
+            upload = FITSFile()
             upload.uuid = fileattrs['qquuid']
-            upload.filename = fileattrs['qqfilename']
-            upload.user = request.user
+            upload.fits_filename = fileattrs['qqfilename']
+            upload.uploaded_by = request.user
             upload.upload_time = time.time()
             upload.sha256 = hashlib.sha256(open(dest, 'r').read()).hexdigest()
+            upload.process_status = 'UPLOADED'
             upload.save()
         else:
             return False  # not a valid file
@@ -108,12 +110,13 @@ def handle_upload(f, fileattrs, request):
                           dest=os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']),
                           uuid=fileattrs['qquuid']):
             # save to db
-            upload = UnprocessedUpload()
+            upload = FITSFile()
             upload.uuid = fileattrs['qquuid']
-            upload.filename = fileattrs['qqfilename']
-            upload.user = request.user
+            upload.fits_filename = fileattrs['qqfilename']
+            upload.uploaded_by = request.user
             upload.upload_time = time.time()
             upload.sha256 = hashlib.sha256(open(os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']), 'r').read()).hexdigest()
+            upload.process_status = 'UPLOADED'
             upload.save()
 
             shutil.rmtree(os.path.dirname(os.path.dirname(dest)))
