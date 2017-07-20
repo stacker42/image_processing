@@ -185,17 +185,6 @@ def process_metadata(request, file_id):
     :return:
     """
 
-    cv_filters = ['N', 'CV', 'SODIUM', 'CLEAR']
-    u_filters = ['U', 'SU', 'ULTRAVIOLET', 'SLOAN-U', 'SLOAN U', 'U-BAND', 'U BAND', 'SU-BAND', 'SU BAND']
-    b_filters = ['B', 'TB', 'BLUE', 'B-BAND', 'B-BAND', 'TB-BAND', 'TB BAND']
-    v_filters = ['V', 'TG', 'SG', 'VISUAL', 'V BAND', 'V-BAND', 'JOHNSON V', 'GREEN', 'SLOAN G', 'SLOAN-G']
-    r_filters = ['R', 'SR', 'CR', 'TR', 'A', 'RED', 'R-BAND', 'H-ALPHA', 'A-BAND', 'SLOAN-R', 'SLOAN R', 'CLEAR R',
-                 'CLEAR-R', 'SR-BAND', 'TR-BAND', 'SR BAND', 'TR BAND']
-    i_filters = ['I', 'SI', 'INFRARED', 'I-BAND', 'I BAND', 'SLOAN I', 'SLOAN-I', 'SI-BAND', 'SI BAND']
-    sz_filters = ['SZ', 'SZ-BAND', 'SZ BAND', 'SLOAN Z', 'SLOAN-Z']
-
-    all_filters = cv_filters + u_filters + b_filters + v_filters + r_filters + i_filters + sz_filters
-
     fits_file = get_object_or_404(FITSFile, pk=file_id)
 
     if not request.user == fits_file.uploaded_by:
@@ -240,6 +229,8 @@ def process_metadata(request, file_id):
             observation.date = float(date)
 
             observation.exptime = inhdulist[0].header[device.exptime_card]
+
+            observation.orignal_filter = inhdulist[0].header[device.filter_card]
 
             general.process_metadata_db(inhdulist, fits_file)
 
@@ -299,19 +290,19 @@ def process_metadata(request, file_id):
 
     # Look through all the possible filters the user could use and narrow it down into the 7 categories that we
     # calibrate with. If we can't find their filter in any of these - then the image can't be used on this site.
-    if filterval in cv_filters:
+    if filterval in settings.CV_FILTERS:
         used_filter = 'CV'
-    elif filterval in u_filters:
+    elif filterval in settings.U_FILTERS:
         used_filter = 'U'
-    elif filterval in b_filters:
+    elif filterval in settings.B_FILTERS:
         used_filter = 'B'
-    elif filterval in v_filters:
+    elif filterval in settings.V_FILTERS:
         used_filter = 'V'
-    elif filterval in r_filters:
+    elif filterval in settings.R_FILTERS:
         used_filter = 'R'
-    elif filterval in i_filters:
+    elif filterval in settings.I_FILTERS:
         used_filter = 'I'
-    elif filterval in sz_filters:
+    elif filterval in settings.SZ_FILTERS:
         used_filter = 'SZ'
     else:
         used_filter = None
@@ -341,7 +332,7 @@ def process_metadata(request, file_id):
     return render(request, "base_process_metadata.html", {'header': header_text, 'file_id': file_id, 'device': device,
                                                         'date': dateval, 'exptime': exptimeval, 'filter': filterval,
                                                         'valid': valid, 'time': timeval, 'used_filter': used_filter,
-                                                        'all_filters': all_filters,
+                                                        'all_filters': settings.ALL_FILTERS,
                                                         'target_supported_filter': target_supported_filter})
 
 
@@ -382,7 +373,43 @@ def process_metadata_modify(request, file_id):
             observation.date = float(date)
 
             observation.exptime = form.cleaned_data['exptime']
-            observation.filter = form.cleaned_data['filter']
+
+            filterval = form.cleaned_data['filter'].upper()
+
+            if filterval in settings.CV_FILTERS:
+                used_filter = 'CV'
+            elif filterval in settings.U_FILTERS:
+                used_filter = 'U'
+            elif filterval in settings.B_FILTERS:
+                used_filter = 'B'
+            elif filterval in settings.V_FILTERS:
+                used_filter = 'V'
+            elif filterval in settings.R_FILTERS:
+                used_filter = 'R'
+            elif filterval in settings.I_FILTERS:
+                used_filter = 'I'
+            elif filterval in settings.SZ_FILTERS:
+                used_filter = 'SZ'
+            else:
+                used_filter = None
+
+            if used_filter is None:
+                form.add_error('filter', "You must choose a valid filter")
+                return render(request, "base_process_metadata_modify.html", {'form': form})
+
+            found = []
+            for f in os.listdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number))):
+                if f[3:].strip('.cat') != used_filter:
+                    found.append(False)
+                else:
+                    found.append(True)
+
+            if True not in found:
+                form.add_error('filter', "You must choose a filter supported by your target")
+                return render(request, "base_process_metadata_modify.html", {'form': form})
+
+            observation.filter = used_filter
+            observation.orignal_filter = form.cleaned_data['filter']
 
             inhdulist = fits.get_hdu_list(
                 os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
