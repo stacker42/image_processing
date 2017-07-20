@@ -6,6 +6,25 @@
 
     <h1>Add or modify an imaging device</h1>
 
+    {% if form.errors %}
+        {% for field in form %}
+            {% for error in field.errors %}
+                <p class="error">
+                    <strong>{{ error|escape }}</strong>
+                </p>
+            {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+            <p class="error">
+                <strong>{{ error|escape }}</strong>
+            </p>
+        {% endfor %}
+    {% endif %}
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
     <form action="." method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}

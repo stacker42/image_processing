@@ -152,7 +152,8 @@
                     }
                     node = document.createElement("a");
                     node.href = "{% url 'process' %}";
-                    node.classList = "btn btn-success";
+                    node.classList.add('btn');
+                    node.classList.add('btn-success');
                     node.appendChild(document.createTextNode("Process my uploads"));
                     completedUploadArea.appendChild(node)
                 }

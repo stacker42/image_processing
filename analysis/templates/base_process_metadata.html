@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Header Check{% endblock %}
+{% block title %}Metadata Check{% endblock %}
 
 {% block content %}
 
-    <h1>Header Check</h1>
-    <p>Please check the header for the file you are about to process looks correct.<br /> We've detected the following values for the associated fields based on your device.</p>
+    <h1>Metadata Check</h1>
+    <p>Please check the metadata for the file you are about to process looks correct.<br /> We've detected the following values for the associated fields based on your device.</p>
 
     <table class="table table-striped">
         <tr><th>Card</th><th>Value</th></tr>
@@ -29,20 +29,20 @@
         <p>The filter that you have chosen is not currently supported for your selected target.</p>
     {% endif %}
 
-    <a href="{% url 'process_header_modify' file_id %}?date={{ date }}&filter={{ filter }}&exptime={{ exptime }}" class="btn btn-primary">This is incorrect, modify values</a>
+    <a href="{% url 'process-metadata-modify' file_id %}?date={{ date }}&filter={{ filter }}&exptime={{ exptime }}" class="btn btn-primary">This is incorrect, modify values</a>
     <br /><br />
-    <form method="POST" action="{% url 'process_header' file_id %}" enctype="multipart/form-data">
+    <form method="POST" action="{% url 'process-metadata' file_id %}" enctype="multipart/form-data">
         {% csrf_token %}
         <input name="delete" type="hidden" value="true">
-        <input type="submit" class="btn btn-danger" value="This header is NOT correct, delete this file">
+        <input type="submit" class="btn btn-danger" value="This metadata is NOT correct, delete this file">
     </form>
     <br />
     {% if valid %}
-    <form method="POST" action="{% url 'process_header' file_id %}" enctype="multipart/form-data">
+    <form method="POST" action="{% url 'process-metadata' file_id %}" enctype="multipart/form-data">
         {% csrf_token %}
         <input name="used_filter" type="hidden" value="{{ used_filter }}">
         <input name="delete" type="hidden" value="false">
-        <input type="submit" class="btn btn-success" value="This header is correct, proceed to add it to the database">
+        <input type="submit" class="btn btn-success" value="This metadata is correct, proceed to add it to the database">
     </form>
     <br />
     {% endif %}

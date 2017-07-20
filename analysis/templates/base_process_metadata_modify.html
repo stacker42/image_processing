@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Header Check{% endblock %}
+{% block title %}Metadata Check{% endblock %}
 
 {% block content %}
+
+    <h1>Modify Metadata</h1>
 
     {% if form.errors %}
         {% for field in form %}
@@ -28,7 +30,7 @@
     <form action="." enctype="multipart/form-data" method="POST">
         {% csrf_token %}
         {{ form.as_p }}
-        <input type="submit" value="Add these values to FITS file header" class="btn btn-success">
+        <input type="submit" value="Modify metadata" class="btn btn-success">
     </form>
 
         <script type="application/javascript">

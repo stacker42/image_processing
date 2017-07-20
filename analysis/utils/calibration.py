@@ -13,7 +13,6 @@ from analysis.models import FITSFile, Observation, Photometry
 import os
 import pyfits
 
-
 SKIP_ROWS_IN_CAT = 9  # number of rows to skip in photometry tables
 POS_OFFSET = 3  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
 
@@ -83,7 +82,8 @@ def do_calibration(file_id, max_use, min_use):
     cal_offset = observation.target.cal_offset
 
     # Read in the first catalogue and create arrays with the data contained within it
-    mastercat = ascii.read(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number) + '.cat'))
+    mastercat = ascii.read(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number),
+                                        'cf_' + observation.filter + '.cat'))
 
     num_m = numpy.array(mastercat['NUMBER'])
     num_m = num_m.astype(numpy.float32)
@@ -276,7 +276,8 @@ def do_calibration(file_id, max_use, min_use):
 
     except ValueError:
         print 'no catalog matches!!'
-        return False
+        return False, "No stars in your photometry catalog matched with the master catalog. Are you sure you chose the" \
+                      "right region?"
 
     # for photofunction + 4th order polynomial fit
     parameters = [med_offset, 0, 0, 0, 0, 0, 0, 0]
@@ -311,20 +312,22 @@ def do_calibration(file_id, max_use, min_use):
         os.mkdir(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
 
         fig = plt.figure()
+
         axis1 = fig.add_subplot(211)
 
         # MedFilter line plot
-        axis1.plot(x, yy, 'b-', lw=2)
+        axis1.plot(x, yy, 'b-', lw=2, label='Median filtered data')
         # Fit function line plot
         # axis1.plot(x, mag_m[check[0]][order] - fitfunc_cal(param_cal, mag_m[check[0]][order] - yy) + med_offset, 'r-',
         # lw=2)
 
         # 0 line of blue dots
-        axis1.scatter(match_mag[check[0]], med_offset + 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
+        axis1.scatter(match_mag[check[0]], med_offset + 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black',
+                      alpha=0.8, label='Zero line')
 
         # Original data plot scatter
         axis1.scatter(match_mag[check[0]], mag_m[check[0]] - match_mag[check[0]], s=5, c="black", edgecolor='black',
-                    alpha=0.8)
+                      alpha=0.8, label='Original data')
         # Max use line
         axis1.axvline(x=max_use, c='green', label='max_use')
 
@@ -344,20 +347,26 @@ def do_calibration(file_id, max_use, min_use):
 
         axis1.set_ylim((ylim_min, ylim_max))
 
+        axis1.legend(loc='center', bbox_to_anchor=(0.5, -0.25), ncol=5, fontsize='x-small')
+
+        axis1.set_ylabel('Offset [mag]')
+        axis1.set_xlabel('Uncalibrated Magnitude [mag]')
+
         axis2 = fig.add_subplot(212)
 
         # Calibrated magnitudes
         cal_mag = fitfunc_cal(param_cal, match_mag[:])
 
         # Zero line of blue dots
-        axis2.scatter(cal_mag[check[0]], 0 * cal_mag[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8)
+        axis2.scatter(cal_mag[check[0]], 0 * cal_mag[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8,
+                      label='Zero line')
 
         # Conditions for the dots to be plotted - magnitude less than 30 but greater than 5
         check_plot = numpy.where((cal_mag[:] < 30) & (cal_mag[:] > 5))
 
         # Scatter plot of calibrated magnitudes (sensible magnitudes)
         axis2.scatter(cal_mag[check_plot[0]], mag_m[check_plot[0]] - cal_mag[check_plot[0]], s=1, c="black",
-                    edgecolor='black', alpha=0.8)
+                    edgecolor='black', alpha=0.8, label='Calibrated magnitudes (<30 & >5)')
 
         # Set up some arrays to use later in the file writing stage, with good data
         mag_m_good = mag_m[check[0]]
@@ -366,7 +375,7 @@ def do_calibration(file_id, max_use, min_use):
 
         # Scatter plot of calibrated magnitudes between min and max mag
         axis2.scatter(cal_mag[check[0]], mag_m[check[0]] - cal_mag[check[0]], s=5, c="red",
-                    edgecolor='black', alpha=0.8)
+                    edgecolor='black', alpha=0.8, label='Calibrated magnitudes')
 
 
         # Max use line
@@ -388,6 +397,14 @@ def do_calibration(file_id, max_use, min_use):
 
         axis2.set_xlim((numpy.min(cal_mag[check[0]]) - 0.5, numpy.max(cal_mag[check[0]]) + 0.5))
         axis2.set_ylim((ylim_min, ylim_max))
+
+        axis2.set_ylabel('Offset [mag]')
+        axis2.set_xlabel('Calibrated Magnitude [mag]')
+
+        axis2.legend(loc='center', bbox_to_anchor=(0.5, -0.25), ncol=5, fontsize='x-small')
+
+        fig.tight_layout()
+        fig.set_size_inches(7, 8)
 
         # Save the calibration plot to the plots directory
         fig.savefig(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id), 'calibrationb_' + fits_file.fits_filename
@@ -433,6 +450,8 @@ def do_calibration(file_id, max_use, min_use):
                 # median = numpy.median(diff_mag[check_within_1mag[0]])
                 rms = numpy.nanstd(diff_mag[check_within_1mag[0]])
                 uncertainty_stars[i] = rms
+
+        print numpy.average(uncertainty_stars)
 
         # determine the limiting magnitude of each image
         binsies = numpy.zeros(80, dtype=numpy.float32).reshape(80)
@@ -535,3 +554,10 @@ def do_calibration(file_id, max_use, min_use):
 
         print "med_offset, starsused, mag_lim, date"
         print med_offset, starsused, maglim, time
+
+        if numpy.average(uncertainty_stars) > 0.05:
+            return 'warning', "Are you sure you chose the right filter? Uncertainty greater than 0.05 mag."
+
+        return True, "Success"
+    else:
+        return False, "There were not enough stars to calibrate with"

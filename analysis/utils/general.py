@@ -24,7 +24,7 @@ def make_response(status=200, content_type='text/plain', content=None):
     return response
 
 
-def process_header_db(inhdulist, fits_file):
+def process_metadata_db(inhdulist, fits_file):
     """
     Actually process the header and put all required information in the database, and move the file to its permanent
     location
@@ -51,6 +51,6 @@ def process_header_db(inhdulist, fits_file):
     upload.handle_deleted_file(str(fits_file.uuid))
 
     # Set the current stage of the processing
-    fits_file.process_status = 'HEADER'
+    fits_file.process_status = 'METADATA'
 
     fits_file.save()

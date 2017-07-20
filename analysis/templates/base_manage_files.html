@@ -4,12 +4,14 @@
 
 {% block content %}
 
+    {% load time %}
+
     <h1>All files and their current status</h1>
 
     <table class="table table-striped">
         <tr><th>Name</th><th>Uploaded By</th><th>Current Status</th><th>Uploaded Time</th><th>Action</th></tr>
         {% for file in files %}
-        <tr><td>{{ file.fits_filename }}</td><td>{{ file.uploaded_by.username }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time }}</td><td>{% if file.process_status == 'FAILED' or file.process_status == 'FAILED_USER' %}<form action="{% url 'delete_file' file.id %}" enctype="multipart/form-data" method="POST">{% csrf_token %}<input type="submit" value="Delete" class="btn btn-danger"></form>{% else %}<button class="btn btn-secondary" disabled>N/A</button>{% endif %}</td></tr>
+        <tr><td>{{ file.fits_filename }}</td><td>{{ file.uploaded_by.username }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time|timestamp_to_human }}</td><td><form action="{% url 'process_reprocess' file.id %}" enctype="multipart/form-data" method="POST">{% csrf_token %}<input type="hidden" name="reprocess" value="true"><input type="submit" value="Reprocess" class="btn btn-danger"></form><form action="{% url 'delete_file' file.id %}" enctype="multipart/form-data" method="POST">{% csrf_token %}<input type="submit" value="Delete" class="btn btn-danger"></form></td></tr>
         {% endfor %}
     </table>
 
@@ -17,7 +19,7 @@
     <ul>
         <li>UPLOADED: The user has just uploaded this file</li>
         <li>DEVICESETUP: The user is setting up the header cards for their device using this file</li>
-        <li>HEADER: User has verified the header</li>
+        <li>METADATA: User has verified the header</li>
         <li>OBSERVATION: User has added observation details</li>
         <li>CHECK_ASTROMETRY: User is checking whether astrometry was successful</li>
         <li>ASTROMETRY: Astrometry was successful</li>

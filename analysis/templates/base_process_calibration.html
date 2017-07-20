@@ -8,23 +8,42 @@
 
     {% load staticfiles %}
 
-    <img src="{{ PLOTS_URL }}/{{ file.id }}/calibrationb_{{ file.fits_filename }}.png?invalidate-cache={% now 'U' %}" width="800px">
+    {% if success == True or success == 'warning' %}
 
-    <br />
+        <img src="{{ PLOTS_URL }}/{{ file.id }}/calibrationb_{{ file.fits_filename }}.png?invalidate-cache={% now 'U' %}" width="800px">
+
+        <br />
+        <br />
+
+        {% if success == 'warning' %}
+            <p>Warning! {{ reason }}</p>
+        {% endif %}
+
+        <form action="{% url 'process_calibration' file.id %}" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="correct" value="true">
+            <input type="submit" value="Calibration graphs appear correct" class="btn btn-primary">
+        </form>
+
+    {% endif %}
     <br />
 
-    <form action="{% url 'process_calibration' file.id %}" method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input type="hidden" name="correct" value="true">
-        <input type="submit" value="Calibration graphs appear correct" class="btn btn-primary">
-    </form>
-
-    <br />
+    {% if success == False %}
+        <p>The calibration was not successful. {{ reason }}</p>
+    {% endif %}
 
     <form action="{% url 'process_calibration_retry' file.id %}" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
         <input type="submit" value="Retry calibration with above values" class="btn btn-default">
+    </form>
+
+    <br />
+
+    <form action="{% url 'process_reprocess' file.id %}" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="reprocess" value="true">
+        <input type="submit" value="Reprocess file" class="btn btn-danger">
     </form>
 
     <br />

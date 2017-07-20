@@ -60,10 +60,12 @@ def process_observation(request, file_id):
     if fits_file.uploaded_by != request.user:
         raise PermissionDenied
 
+    print fits_file.process_status
+
     # Let the user sort out their header cards for the device they are using if they go here
     # (We don't want a seperate header cards button when this will be a rare thing)
     if fits_file.process_status == 'DEVICESETUP':
-        redirect('process_devicesetup', file_id=file_id)
+        return redirect('process_devicesetup', file_id=file_id)
 
     if fits_file.process_status != 'UPLOADED':
         return render(request, "base_process_ooo.html")
@@ -71,7 +73,7 @@ def process_observation(request, file_id):
     if request.method == "POST":
         form = ObservationForm(request.POST)
         if form.is_valid():
-            obs = form.save(commit=False)
+            obs = form.save(commit=False)  # Don't save object to DB just yet... we need to add more info
             obs.user = request.user
             obs.fits = fits_file
             obs.save()
@@ -81,9 +83,11 @@ def process_observation(request, file_id):
 
             observations = Observation.objects.filter(device=form.cleaned_data['device'])
 
+            # If more than one observation has been made with this device, then go to the next stage
             if len(observations) > 1:
                 return redirect('process')
             else:
+                # Otherwise... we need to set up some header cards for the device
                 fits_file.process_status = 'DEVICESETUP'
                 fits_file.save()
                 return redirect('process_devicesetup', file_id=file_id)
@@ -117,23 +121,28 @@ def process_devicesetup(request, file_id):
     # Get the observation corresponding to our FITS file
     observation = get_object_or_404(Observation, fits=fits_file)
 
-    observations = Observation.objects.filter(device=observation.device)
+    #observations = Observation.objects.filter(device=observation.device)
 
     device = observation.device
 
-    if len(observations) > 1:
-        # In case the user decides to close their browser and use another file for device setup, then we need to free
-        # this one from being used in the device setup stage
-        fits_file.process_status = 'OBSERVATION'
-        fits_file.save()
-        return redirect('process')
+    # The following is actually problematic and can cause no device setup to take place - so commented out for now
+    # if len(observations) > 1:
+    #     # In case the user decides to close their browser and use another file for device setup, then we need to free
+    #     # this one from being used in the device setup stage
+    #     fits_file.process_status = 'OBSERVATION'
+    #     fits_file.save()
+    #     return redirect('process')
 
     if request.method == 'POST':
-        form = HeaderKeyChoiceForm(request.POST)
+        form = MetadataKeyChoiceForm(request.POST)
+        # Get the cards that they chose from the form and put them in the database for this particular device
         device.filter_card = form.data['filter']
         device.date_card = form.data['date']
         device.exptime_card = form.data['exposure_time']
         device.date_format = form.data['date_format']
+        # Only actually add a time card if they chose date and time seperated
+        if form.data['date_format'] == 'DATETIMESEP':
+                device.time_card = form.data['time']
         device.save()
 
         # Okay now we can make it look like we've finished sorting out the observation
@@ -145,13 +154,16 @@ def process_devicesetup(request, file_id):
     hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid),
                                              fits_file.fits_filename))
 
-    form = HeaderKeyChoiceForm()
+    form = MetadataKeyChoiceForm()
+    # Add a NONE key to the header so it presents as one of the choices for users.
+    # (We don't add it to the actual header)
     hdulist[0].header['NONE'] = 'NONE'
     # Set up the choices of all the header keys. These need to be in a tuple :(
     choices = tuple(zip(hdulist[0].header.keys(), hdulist[0].header.keys()))
 
     # The form by default has no values for the choices, so add them here
     form.fields['date'].choices = choices
+    form.fields['time'].choices = choices
     form.fields['filter'].choices = choices
     form.fields['exposure_time'].choices = choices
 
@@ -159,7 +171,7 @@ def process_devicesetup(request, file_id):
 
 
 @login_required
-def process_header(request, file_id):
+def process_metadata(request, file_id):
     """
     Lets the user check the header information in a given file, based on UUID
     User has the option to delete the file, if the header is not correct, or
@@ -169,9 +181,20 @@ def process_header(request, file_id):
     from upload and not from the current file which may have been modified by the platform, and therefore have a
     different hash.
 
-    :param uuid: The UUID of the file to check
+    :param file_id: The ID of the file to check
     :return:
     """
+
+    cv_filters = ['N', 'CV', 'SODIUM', 'CLEAR']
+    u_filters = ['U', 'SU', 'ULTRAVIOLET', 'SLOAN-U', 'SLOAN U', 'U-BAND', 'U BAND', 'SU-BAND', 'SU BAND']
+    b_filters = ['B', 'TB', 'BLUE', 'B-BAND', 'B-BAND', 'TB-BAND', 'TB BAND']
+    v_filters = ['V', 'TG', 'SG', 'VISUAL', 'V BAND', 'V-BAND', 'JOHNSON V', 'GREEN', 'SLOAN G', 'SLOAN-G']
+    r_filters = ['R', 'SR', 'CR', 'TR', 'A', 'RED', 'R-BAND', 'H-ALPHA', 'A-BAND', 'SLOAN-R', 'SLOAN R', 'CLEAR R',
+                 'CLEAR-R', 'SR-BAND', 'TR-BAND', 'SR BAND', 'TR BAND']
+    i_filters = ['I', 'SI', 'INFRARED', 'I-BAND', 'I BAND', 'SLOAN I', 'SLOAN-I', 'SI-BAND', 'SI BAND']
+    sz_filters = ['SZ', 'SZ-BAND', 'SZ BAND', 'SLOAN Z', 'SLOAN-Z']
+
+    all_filters = cv_filters + u_filters + b_filters + v_filters + r_filters + i_filters + sz_filters
 
     fits_file = get_object_or_404(FITSFile, pk=file_id)
 
@@ -181,12 +204,13 @@ def process_header(request, file_id):
     if request.method == "POST":
 
         if request.POST.get('delete') == "true":
+            # User has requested to delete the FITS file, so we will do so
             upload.handle_deleted_file(str(fits_file.uuid))
             observation = Observation.objects.get(fits=fits_file)
             observation.delete()
             fits_file.delete()
 
-            return redirect('home')
+            return redirect('process')
         else:
             # Need to set some information for the observation
             # First lets check that the user has permission to work with this file
@@ -197,26 +221,46 @@ def process_header(request, file_id):
             observation = Observation.objects.get(fits=fits_file)
             device = observation.device
 
-            # Convert whatever format the date is in the header to Julian
-            date = Time(inhdulist[0].header[device.date_card])
-            observation.date = date.jd
+            # Get the filter we actually want to use from the form thats submitted. Don't bother with whats in the
+            # header now, we know its something we can support. Narrow down the option.
+            observation.filter = request.POST.get('used_filter')
+
+            if device.date_format == 'MJD':
+                date = inhdulist[0].header[device.date_card] + 2400000.5
+            elif device.date_format == 'JD':
+                date = inhdulist[0].header[device.date_card]
+            elif device.date_format == 'DATETIME':
+                date = Time(inhdulist[0].header[device.date_card]).jd
+            elif device.date_format == 'DATETIMESEP':
+                time = inhdulist[0].header[device.time_card]
+                date = inhdulist[0].header[device.date_card]
+                date = Time(date + "T" + time).jd
+
+            # Convert whatever format the date is in the header to Julian and store this
+            observation.date = float(date)
 
             observation.exptime = inhdulist[0].header[device.exptime_card]
-            observation.filter = inhdulist[0].header[device.filter_card]
 
-            general.process_header_db(inhdulist, fits_file)
+            general.process_metadata_db(inhdulist, fits_file)
+
+            observation.save()
             return redirect('process')
 
     # Only users of the file can process the header
     if fits_file.uploaded_by != request.user:
         raise PermissionDenied
 
-    fits_hashes = FITSFile.objects.values('sha256').exclude(id=fits_file.id)
+    if fits_file.process_status != 'OBSERVATION':
+        return render(request, "base_process_ooo.html")
+
+    fits_hashes = FITSFile.objects.exclude(id=fits_file.id).values_list('sha256', flat=True)
+
+    print fits_hashes
 
     # Check if the file already exists on the system, and if it does, don't let the user go any furthur
     # (make them delete the file)
     if fits_file.sha256 in fits_hashes:
-       return render(request, "base_process_duplicate.html", {'fits_file': fits_file})
+        return render(request, "base_process_duplicate.html", {'fits_file': fits_file})
 
     hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid),
                                              fits_file.fits_filename))
@@ -229,12 +273,14 @@ def process_header(request, file_id):
     valid = True
 
     try:
+        # Use date card from the device
         dateval = hdulist[0].header[device.date_card]
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
         valid = False
         dateval = ''
     try:
+        # Use exposure time card from device
         exptimeval = hdulist[0].header[device.exptime_card]
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
@@ -242,22 +288,68 @@ def process_header(request, file_id):
         exptimeval = ''
 
     try:
+        # Use filter card from device
         filterval = hdulist[0].header[device.filter_card]
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
         valid = False
         filterval = ''
 
-    return render(request, "base_process_header.html", {'header': header_text, 'file_id': file_id, 'device': device,
+    filterval = filterval.upper()
+
+    # Look through all the possible filters the user could use and narrow it down into the 7 categories that we
+    # calibrate with. If we can't find their filter in any of these - then the image can't be used on this site.
+    if filterval in cv_filters:
+        used_filter = 'CV'
+    elif filterval in u_filters:
+        used_filter = 'U'
+    elif filterval in b_filters:
+        used_filter = 'B'
+    elif filterval in v_filters:
+        used_filter = 'V'
+    elif filterval in r_filters:
+        used_filter = 'R'
+    elif filterval in i_filters:
+        used_filter = 'I'
+    elif filterval in sz_filters:
+        used_filter = 'SZ'
+    else:
+        used_filter = None
+
+    found = []
+    for f in os.listdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number))):
+        if f[3:].strip('.cat') != used_filter:
+            found.append(False)
+        else:
+            found.append(True)
+
+    if True not in found:
+        target_supported_filter = False
+        valid = False
+    else:
+        target_supported_filter = True
+
+    if device.time_card is not None:
+        try:
+            timeval = hdulist[0].header[device.time_card]
+        except KeyError:
+            valid = False
+            timeval = ''
+    else:
+        timeval = 'N/A'
+
+    return render(request, "base_process_metadata.html", {'header': header_text, 'file_id': file_id, 'device': device,
                                                         'date': dateval, 'exptime': exptimeval, 'filter': filterval,
-                                                        'valid': valid})
+                                                        'valid': valid, 'time': timeval, 'used_filter': used_filter,
+                                                        'all_filters': all_filters,
+                                                        'target_supported_filter': target_supported_filter})
 
 
-def process_header_modify(request, file_id):
+def process_metadata_modify(request, file_id):
     """
     Modify (or ideally add) the required header cards to the FITS file so we'll be able to analyse it
     :param request:
-    :param uuid: The UUID of the FITS file
+    :param file_id: The ID of the FITS file
     :return:
     """
 
@@ -269,16 +361,25 @@ def process_header_modify(request, file_id):
 
     if request.method == "POST":
         # make changes to the file
-        form = HeaderForm(request.POST)
+        form = MetadataForm(request.POST)
         if form.is_valid():
             # Need to set some information for the observation
             # First lets check that the user has permission to work with this file
 
             observation = Observation.objects.get(fits=fits_file)
 
-            # Convert whatever format the date is in the header to Julian
-            date = Time(form.cleaned_data['date'])
-            observation.date = date.jd
+            if form.cleaned_data['date_format'] == 'MJD':
+                date = form.cleaned_data['date'] + str(2400000.5)
+            elif form.cleaned_data['date_format'] == 'JD':
+                date = form.cleaned_data['date']
+            elif form.cleaned_data['date_format'] == 'DATETIME':
+                date = Time(form.cleaned_data['date']).jd
+            elif form.cleaned_data['date_format'] == 'DATETIMESEP':
+                time = form.cleaned_data['time']
+                date = form.cleaned_data['date']
+                date = Time(date + "T" + time).jd
+
+            observation.date = float(date)
 
             observation.exptime = form.cleaned_data['exptime']
             observation.filter = form.cleaned_data['filter']
@@ -286,17 +387,21 @@ def process_header_modify(request, file_id):
             inhdulist = fits.get_hdu_list(
                 os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
 
-            general.process_header_db(inhdulist, fits_file)
+            general.process_metadata_db(inhdulist, fits_file)
+
+            observation.save()
             return redirect('process')
         else:
-            return render(request, "base_process_header_modify.html", {'form': form})
+            return render(request, "base_process_metadata_modify.html", {'form': form})
     else:
+        # The values that we might have grabbed from the header will be in the GET variables. If there's nothing there,
+        # then the initial data will just be blank, which is intentional
         initial_values = {'exptime': request.GET.get('exptime'), 'date': request.GET.get('date'),
                           'filter': request.GET.get('filter')}
 
-        form = HeaderForm(initial=initial_values)
+        form = MetadataForm(initial=initial_values)
 
-        return render(request, "base_process_header_modify.html", {'form': form})
+        return render(request, "base_process_metadata_modify.html", {'form': form})
 
 
 @login_required
@@ -315,13 +420,14 @@ def process_astrometry(request, file_id):
         raise Http404
 
     if fits_file.process_status == 'CHECK_ASTROMETRY' and request.method == "POST" and \
-                    request.user == fits_file.uploaded_by:
+       request.user == fits_file.uploaded_by:
         # The results of the user choice whether the action was successful or not.
 
         # They say it was successful!
         if request.POST.get('correct') == 'true':
             fits_file.process_status = 'ASTROMETRY'
             fits_file.save()
+            # Remove temporary astrometry directory
             shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))
             return redirect('process')
         else:
@@ -333,7 +439,7 @@ def process_astrometry(request, file_id):
     if fits_file.process_status == 'CHECK_ASTROMETRY':
         return render(request, "base_process_astrometry.html", {'file': fits_file})
 
-    if fits_file.process_status != 'OBSERVATION':
+    if fits_file.process_status != 'METADATA':
         return render(request, "base_process_ooo.html")
 
     if request.user != fits_file.uploaded_by:
@@ -343,6 +449,7 @@ def process_astrometry(request, file_id):
     astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename),
                              str(fits_file.id))
 
+    # Let the user check whether astrometry was successful
     fits_file.process_status = 'CHECK_ASTROMETRY'
 
     fits_file.save()
@@ -376,6 +483,7 @@ def process_photometry(request, file_id):
 
     fits_file.catalogue_filename = fits_file.fits_filename + '.cat'
 
+    # Let the user progress to the next stage
     fits_file.process_status = 'PHOTOMETRY'
 
     fits_file.save()
@@ -417,20 +525,22 @@ def process_calibration(request, file_id):
 
     if fits_file.process_status == 'CHECK_CALIBRATION':
         form = RedoCalibrationForm()
-        return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
+        return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form, 'success': True})
 
     if fits_file.process_status != 'PHOTOMETRY':
         return render(request, "base_process_ooo.html")
 
     # Run the calibration process for this file
-    calibration.do_calibration(file_id, min_use=0, max_use=0)
+    success, reason = calibration.do_calibration(file_id, min_use=0, max_use=0)
 
+    # Let the user check the results of the calibration
     fits_file.process_status = 'CHECK_CALIBRATION'
 
     fits_file.save()
 
     form = RedoCalibrationForm()
-    return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
+    return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form, 'success': success,
+                                                             'reason': reason})
 
 
 @login_required
@@ -465,18 +575,74 @@ def process_calibration_retry(request, file_id):
             observation = Observation.objects.get(fits=fits_file)
             Photometry.objects.filter(observation=observation).delete()
 
-            calibration.do_calibration(file_id, max_use=form.cleaned_data['max_use'],
+            # Re-do calibration with values that the user has entered
+            success, reason = calibration.do_calibration(file_id, max_use=form.cleaned_data['max_use'],
                                        min_use=form.cleaned_data['min_use'])
 
             fits_file.process_status = 'CHECK_CALIBRATION'
 
             fits_file.save()
 
-            return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
+            return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form,
+                                                                     'success': success, 'reason': reason})
         else:
             return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form})
     else:
         return redirect('process_calibration', file_id=file_id)
+
+
+def process_reprocess(request, file_id):
+    """
+    Allow a user to re-process a file from the beginning (the header check)
+    :param request:
+    :param file_id: The ID of the file to reprocess
+    :return:
+    """
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
+
+    if (request.user != fits_file.uploaded_by) and (not request.user.is_staff):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        # Make sure the user definately wants to reprocess file. Hasn't accidentally done this.
+        if request.POST.get('reprocess') == 'true':
+            try:
+                observation = Observation.objects.get(fits=fits_file)
+                Photometry.objects.filter(observation=observation).delete()
+                observation.delete()
+            except ObjectDoesNotExist:
+                pass  # We don't care if they don't exist, we're deleting them anyway
+
+            # Remove all folders we drop during analysis
+            if os.path.exists(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id))):
+                shutil.rmtree(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id)))
+
+            if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id))):
+                shutil.rmtree(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
+
+            if os.path.exists(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id))):
+                shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))
+
+            if not os.path.exists(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid))):
+                os.mkdir(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid)))
+
+            # Move the FITS file back to an original temporary directory
+            shutil.move(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename),
+                        os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
+
+            if os.path.exists(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id))):
+                shutil.rmtree(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
+
+            fits_file.process_status = 'UPLOADED'
+
+            fits_file.save()
+
+            return redirect('process')
+
+        else:
+            raise PermissionDenied
+    else:
+        raise PermissionDenied
 
 
 @login_required
@@ -488,22 +654,46 @@ def add_object(request):
     :return:
     """
 
+    catalog_files = ['cf_CV', 'cf_U', 'cf_B', 'cf_V', 'cf_R', 'cf_I', 'cf_SZ']
+
     if request.method == "POST":
         form = ObjectForm(request.POST)
         # Check the user has specified a catalog file and the rest of the form is valid
-        if ('catfile' in request.FILES) and (form.is_valid()):
-            cat_file = request.FILES.get('catfile')
+        if form.is_valid():
+
+            submitted_cats = {}
+
+            # Get all possible catalog files the user could have submitted
+            for catalog_file in catalog_files:
+                submitted_cats[catalog_file] = request.FILES.get(catalog_file)
+
+            if all(item is None for item in submitted_cats.values()):  # If all items in catalog_files are None...
+                form.add_error('number', 'You need to select at least one catalog file')
+                return render(request, "base_add_object.html", {'form': form})
+
             if not os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']))):
-                path = os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']) + '.cat')
-                # Write the catalog file to disk under the new name
-                with open(path, 'w') as f:
-                    f.write(cat_file.read())
-                    f.close()
+                os.mkdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number'])))
+
+                # Go though all possible catalog file combinations and see if the user picked one. If they did, create
+                # the file
+                for name, cat_file in submitted_cats.iteritems():
+
+                    # make sure we only try and write catalog files that users uploaded
+                    if cat_file is not None:
+                        path = os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']),
+                                            name + '.cat')
+                        # Write the catalog file to disk under the new name
+                        with open(path, 'w') as f:
+                            f.write(cat_file.read())
+                            f.close()
+
                 form.save()
                 # Give the user a fresh form
                 newform = ObjectForm()
+
                 return render(request, "base_add_object.html", {'form': newform})
             else:
+                form.add_error('number', 'Number is not unique')
                 return render(request, "base_add_object.html", {'form': form})
         else:
             return render(request, "base_add_object.html", {'form': form})
@@ -523,7 +713,12 @@ def add_device(request):
     if request.method == "POST":
         form = ImagingDeviceForm(request.POST)
         if form.is_valid():
-            device = form.save(commit=False)
+            device_names = ImagingDevice.objects.filter(user=request.user).values_list('name', flat=True)
+            # Make sure the device name is unique for this user
+            if form.cleaned_data['name'] in device_names:
+                form.add_error('name', 'Name must be unique per user')
+                return render(request, "base_add_device.html", {'form': form})
+            device = form.save(commit=False)  # Don't save just yet - need to add the user
             device.user = request.user
             device.save()
             return redirect('accounts_profile')
@@ -536,7 +731,7 @@ def add_device(request):
 
 
 @login_required
-@permission_required('is_staff', raise_exception=True)  # Only let staff users add objects
+@permission_required('is_staff', raise_exception=True)  # Only let staff users edit objects
 def modify_object(request, id):
     """
     Modify the attributes of a given object
@@ -549,15 +744,37 @@ def modify_object(request, id):
     except (ObjectDoesNotExist, ValueError):
         raise Http404
 
+    catalog_files = ['cf_CV', 'cf_U', 'cf_B', 'cf_V', 'cf_R', 'cf_I', 'cf_SZ']
+
     if request.method == "POST":
         form = ObjectForm(request.POST, instance=object)
         if form.is_valid():
             form.save()
+
+            if not os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']))):
+                os.mkdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number'])))
+
+            # Go though all possible catalog file combinations and see if the user picked one. If they did, create
+            # the file
+            for catalog_file in catalog_files:
+                cat_file = request.FILES.get(catalog_file)
+
+                # make sure we only try and write catalog files that the user uploaded
+                if cat_file is not None:
+                    path = os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']),
+                                        catalog_file + '.cat')
+                    # Write the catalog file to disk under the new name
+                    with open(path, 'w') as f:
+                        f.write(cat_file.read())
+                        f.close()
+
             return redirect('objects')
+
         else:
             return render(request, "base_add_object.html", {'form': form})
     else:
         form = ObjectForm(instance=object)
+        form.fields['number'].disabled = True  # We disable editing the object number because it will mess up everything
 
         return render(request, "base_add_object.html", {'form': form})
 

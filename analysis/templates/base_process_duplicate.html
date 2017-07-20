@@ -9,7 +9,7 @@
     <p>The file that you are trying to process has already been uploaded to this site before. Are you sure that you
         haven't previously uploaded this file? You can check the files you have previously uploaded <a href="{% url 'accounts_profile' %}">here</a>.</p>
 
-    <form method="POST" action="{% url 'process_header' fits_file.id %}" enctype="multipart/form-data">
+    <form method="POST" action="{% url 'process-metadata' fits_file.id %}" enctype="multipart/form-data">
         {% csrf_token %}
         <input name="delete" type="hidden" value="true">
         <input type="submit" class="btn btn-danger" value="Delete duplicate file">

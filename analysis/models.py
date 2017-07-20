@@ -13,12 +13,12 @@ class ImagingDevice(models.Model):
     name = models.CharField(max_length=255)
     scale = models.FloatField()
     date_card = models.CharField(max_length=9, blank=True, null=True)
+    time_card = models.CharField(max_length=9, blank=True, null=True)
     filter_card = models.CharField(max_length=9, blank=True, null=True)
     exptime_card = models.CharField(max_length=9, blank=True, null=True)
     date_format = models.CharField(max_length=255, blank=True, null=True)
-    description = models.CharField(max_length=10000)
+    description = models.CharField(max_length=10000, blank=True, null=True)
     mirror_diameter = models.FloatField()
-    mirror_size = models.FloatField()
 
     class Meta:
         db_table = 'imaging_devices'
@@ -53,7 +53,8 @@ class FITSFile(models.Model):
     # The statuses that we can use
     STATUS_CHOICES = (
         ('UPLOADED', 'Uploaded'),
-        ('HEADER', 'Header check'),
+        ('DEVICESETUP', 'Device setup'),
+        ('METADATA', 'Metadata check'),
         ('OBSERVATION', 'Add observation details'),
         ('ASTROMETRY', 'Astrometry'),
         ('PHOTOMETRY', 'Photometry'),
@@ -98,9 +99,10 @@ class Observation(models.Model):
     """
     Stores all the information about a specific observation
     """
-    time = models.FloatField(blank=True, null=True)
+    date = models.FloatField(blank=True, null=True)
     user = models.ForeignKey(User)
     filter = models.CharField(max_length=255, blank=True, null=True)
+    orignal_filter = models.CharField(max_length=255, blank=True, null=True)
     exptime = models.FloatField(blank=True, null=True)
     fits = models.ForeignKey(FITSFile)
     target = models.ForeignKey(Object)

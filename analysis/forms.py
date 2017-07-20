@@ -39,42 +39,47 @@ class ObservationForm(forms.ModelForm):
         labels = {'target': 'Target of observation', 'device': 'Device used'}
 
 
-class HeaderForm(forms.Form):
+class MetadataForm(forms.Form):
     """
     A form to add missing information to the FITS header
     """
     DATE_FORMAT_CHOICES = (
         ('JD', 'Julian Date'),
         ('MJD', 'Modified Julian Date'),
-        ('DATETIME', 'Date and Time')
+        ('DATETIME', 'Date and Time (Same Field)'),
+        ('DATETIMESEP', 'Date and Time (Seperate Fields)')
+
     )
+    date_format = forms.ChoiceField(choices=DATE_FORMAT_CHOICES)
+    date = forms.CharField(max_length=255, label="Date of observation")
+    time = forms.CharField(max_length=255, label="Time of observation", required=False)
     exptime = forms.FloatField(label="Exposure time")
     filter = forms.CharField(max_length=255, label="Filter")
-    date = forms.CharField(max_length=255, label="Date of observation")
-    date_format = forms.ChoiceField(choices=DATE_FORMAT_CHOICES)
 
 
-class HeaderKeyChoiceForm(forms.Form):
+class MetadataKeyChoiceForm(forms.Form):
     DATE_FORMAT_CHOICES = (
         ('JD', 'Julian Date'),
         ('MJD', 'Modified Julian Date'),
-        ('DATETIME', 'Date and Time')
+        ('DATETIME', 'Date and Time (Same Field)'),
+        ('DATETIMESEP', 'Date and Time (Seperate Fields)')
     )
-    date = forms.ChoiceField()
     date_format = forms.ChoiceField(choices=DATE_FORMAT_CHOICES)
+    date = forms.ChoiceField()
+    time = forms.ChoiceField()
     filter = forms.ChoiceField()
     exposure_time = forms.ChoiceField()
 
 
 class ImagingDeviceForm(forms.ModelForm):
     """
-    Form to add a new imaging device or to modify an exsting one
+    Form to add a new imaging device or to modify an existing one
     """
     class Meta:
         model = ImagingDevice
-        fields = ('name', 'scale', 'mirror_size', 'mirror_diameter', 'description')
-        labels = {'name': 'Name of your device', 'scale': 'Pixel scale', 'mirror_size': 'Mirror size',
-                  'mirror_diameter': 'Mirror diameter'}
+        fields = ('name', 'scale', 'mirror_diameter', 'description')
+        labels = {'name': 'Name of your device', 'scale': 'Pixel scale (arcseconds)',
+                  'mirror_diameter': 'Mirror diameter (m)'}
         widgets = {'description': forms.Textarea}
 
 
