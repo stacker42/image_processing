@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Header Check{% endblock %}
+
+{% block content %}
+
+    {% if form.errors %}
+        {% for field in form %}
+            {% for error in field.errors %}
+                <p class="error">
+                    <strong>{{ error|escape }}</strong>
+                </p>
+            {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+            <p class="error">
+                <strong>{{ error|escape }}</strong>
+            </p>
+        {% endfor %}
+    {% endif %}
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+
+    <form action="." enctype="multipart/form-data" method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Add these values to FITS file header" class="btn btn-success">
+    </form>
+
+        <script type="application/javascript">
+        // Hide our seperate time field unless the user explicitly says that there is seperate date and time fields
+
+        $('#id_time').hide();
+        $('label[for="id_time"]').hide();
+
+        $('#id_date_format').on('change', function() {
+            if (this.value === 'DATETIMESEP') {
+                $('#id_time').show();
+                $('label[for="id_time"]').show();
+            } else {
+                $('#id_time').hide();
+                $('label[for="id_time"]').hide();
+            }
+        })
+
+    </script>
+
+{% endblock %}
