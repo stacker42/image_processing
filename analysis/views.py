@@ -38,7 +38,10 @@ def process(request):
     :param request:
     :return:
     """
-    files = FITSFile.objects.filter(uploaded_by=request.user).exclude(process_status='COMPLETE').order_by('upload_time')
+    files = FITSFile.objects.filter(uploaded_by=request.user).filter(~Q(process_status='COMPLETE') &
+                                                                     ~Q(process_status='FAILED') &
+                                                                     ~Q(process_status='FAILED_USER')
+                                                                     ).order_by('upload_time')
 
     return render(request, "base_process.html", {'files': files})
 
@@ -451,40 +454,6 @@ def process_astrometry(request, file_id):
 
 
 @login_required
-def process_photometry(request, file_id):
-    """
-    Run the photometry prpcess for a particular file based on its ID
-    :param request:
-    :param file_id: The ID of the file we are processing
-    :return:
-    """
-
-    # See if this FITS file actually exists in our database
-    try:
-        fits_file = FITSFile.objects.get(pk=file_id)
-    except (ObjectDoesNotExist, ValueError):
-        raise Http404
-
-    if fits_file.process_status != 'ASTROMETRY':
-        return render(request, "base_process_ooo.html")
-
-    if request.user != fits_file.uploaded_by:
-        raise PermissionDenied
-
-    # Run the photometry process for this file
-    photometry.do_photometry(fits_file.fits_filename, fits_file.id)
-
-    fits_file.catalogue_filename = fits_file.fits_filename + '.cat'
-
-    # Let the user progress to the next stage
-    fits_file.process_status = 'PHOTOMETRY'
-
-    fits_file.save()
-
-    return redirect('process')
-
-
-@login_required
 def process_calibration(request, file_id):
     """
     Run the calibration for a particular file based on its ID
@@ -520,8 +489,15 @@ def process_calibration(request, file_id):
         form = RedoCalibrationForm()
         return render(request, "base_process_calibration.html", {'file': fits_file, 'form': form, 'success': True})
 
-    if fits_file.process_status != 'PHOTOMETRY':
+    if fits_file.process_status != 'ASTROMETRY':
         return render(request, "base_process_ooo.html")
+
+    # Run the photometry
+    photometry.do_photometry(fits_file.fits_filename, file_id)
+
+    fits_file.catalogue_filename = fits_file.fits_filename + '.cat'
+
+    fits_file.save()
 
     # Run the calibration process for this file
     success, reason = calibration.do_calibration(file_id, min_use=0, max_use=0)
@@ -611,7 +587,9 @@ def process_reprocess(request, file_id):
 
             # Move the FITS file back to an original temporary directory
             shutil.move(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
-                        os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
+                        os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.original_filename))
+
+            fits_file.fits_filename = fits_file.original_filename
 
             general.delete_folders(fits_file)
 

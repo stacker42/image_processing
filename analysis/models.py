@@ -57,17 +57,16 @@ class FITSFile(models.Model):
         ('METADATA', 'Metadata check'),
         ('OBSERVATION', 'Add observation details'),
         ('ASTROMETRY', 'Astrometry'),
-        ('PHOTOMETRY', 'Photometry'),
         ('CALIBRATION', 'Calibration'),
         ('COMPLETE', 'Processing complete'),
         ('FAILED', 'Processing failed'),
         ('FAILED_USER', 'User invoked processing failed'),
         ('CHECK_ASTROMETRY', 'Check whether astrometry was successful'),
-        ('CHECK_PHOTOMETRY', 'Check whether astrometry was successful'),
-        ('CHECK_CALIBRATION', 'Check whether astrometry was successful'),
+        ('CHECK_CALIBRATION', 'Check whether calibration was successful'),
     )
 
     fits_filename = models.CharField(max_length=255)
+    original_filename = models.CharField(max_length=255)
     catalogue_filename = models.CharField(max_length=255)
     process_status = models.CharField(choices=STATUS_CHOICES, max_length=255)
     uploaded_by = models.ForeignKey(User)

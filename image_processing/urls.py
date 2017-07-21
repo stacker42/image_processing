@@ -30,7 +30,7 @@ urlpatterns = [
         name="process-metadata-modify"),
     url(r'^process/observation/(?P<file_id>[0-9]+)/$', views.process_observation, name='process_observation'),
     url(r'^process/astrometry/(?P<file_id>[0-9]+)/$', views.process_astrometry, name='process_astrometry'),
-    url(r'^process/photometry/(?P<file_id>[0-9]+)/$', views.process_photometry, name='process_photometry'),
+    #url(r'^process/photometry/(?P<file_id>[0-9]+)/$', views.process_photometry, name='process_photometry'),
     url(r'^process/calibration/(?P<file_id>[0-9]+)/$', views.process_calibration, name='process_calibration'),
     url(r'^process/calibration/retry/(?P<file_id>[0-9]+)/$', views.process_calibration_retry,
         name='process_calibration_retry'),

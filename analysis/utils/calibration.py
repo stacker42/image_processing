@@ -198,12 +198,6 @@ def do_calibration(file_id, max_use, min_use):
         hist, bin_edges = numpy.histogram(mag_2[check[0]], bins=binsies)
         max_use = binsies[numpy.argmax(hist)]
 
-        print ' hist ###'
-        print hist
-        print 'binsies ##'
-        print binsies
-        print '##'
-
     # If no min use is specified then generate one
     if min_use == 0:
         check = numpy.where((flag_2[:] == 0) & (mag_2[:] > -50))
@@ -250,10 +244,6 @@ def do_calibration(file_id, max_use, min_use):
                         (match_flag == 0))
 
     starsused = len(check[0])
-
-    print '#############'
-    print match_mag[check[0]]
-    print '############'
 
     try:
         min_use = numpy.min(match_mag[check[0]])

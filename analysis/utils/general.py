@@ -59,6 +59,8 @@ def process_metadata_db(inhdulist, fits_file, request):
     # Delete the old temporary directory for this file
     upload.handle_deleted_file(str(fits_file.uuid))
 
+    fits_file.original_filename = fits_file.fits_filename
+
     fits_file.fits_filename = filename
 
     # Set the current stage of the processing
@@ -102,11 +104,11 @@ def delete_folders(fits_file):
     """
 
     # Remove all folders we drop during analysis
-    if os.path.exists(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalog_filename)):
-        os.remove(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalog_filename))
+    if os.path.exists(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalogue_filename)):
+        os.remove(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalogue_filename))
 
-    if os.path.exists(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalog_filename)):
-        os.remove(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalog_filename))
+    if os.path.exists(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalogue_filename)):
+        os.remove(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalogue_filename))
 
     if os.path.exists(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename)):
         os.remove(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename))

@@ -25,9 +25,9 @@
     <h2>Processed files</h2>
         {% if processed_files|length > 0 %}
             <table class="table table-striped">
-                <tr><th>Name</th><th>Current Status</th><th>Uploaded Time</th></tr>
+                <tr><th>Name</th><th>Original Name</th><th>Current Status</th><th>Uploaded Time</th></tr>
                 {% for file in processed_files %}
-                <tr><td>{{ file.fits_filename }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time|timestamp_to_human }}</td></tr>
+                <tr><td>{{ file.fits_filename }}</td><td>{{ file.original_filename }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time|timestamp_to_human }}</td></tr>
                 {% endfor %}
             </table>
         {% else %}
