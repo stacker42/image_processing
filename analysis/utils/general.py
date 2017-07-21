@@ -24,7 +24,7 @@ def make_response(status=200, content_type='text/plain', content=None):
     return response
 
 
-def process_metadata_db(inhdulist, fits_file):
+def process_metadata_db(inhdulist, fits_file, request):
     """
     Actually process the header and put all required information in the database, and move the file to its permanent
     location
@@ -43,12 +43,23 @@ def process_metadata_db(inhdulist, fits_file):
 
     fits_file.header = header
 
-    # Make a new directory for the file and put it into this new directory.
-    os.mkdir(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
+    observation = Observation.objects.get(fits=fits_file)
+
+    print observation.target.name
+
+    print observation.orignal_filter
+
+    print observation.date
+
+    filename = str(fits_file.id) + '_' + str(request.user.id) + '_' + str(observation.device.id) + '_' + \
+               observation.target.name + '_' + observation.orignal_filter + '_' + str(observation.date) + '.fits'
+
     shutil.move(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename),
-                os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename))
+                os.path.join(settings.FITS_DIRECTORY, filename))
     # Delete the old temporary directory for this file
     upload.handle_deleted_file(str(fits_file.uuid))
+
+    fits_file.fits_filename = filename
 
     # Set the current stage of the processing
     fits_file.process_status = 'METADATA'
@@ -91,14 +102,17 @@ def delete_folders(fits_file):
     """
 
     # Remove all folders we drop during analysis
-    if os.path.exists(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id))):
-        shutil.rmtree(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id)))
+    if os.path.exists(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalog_filename)):
+        os.remove(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalog_filename))
 
-    if os.path.exists(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id))):
-        shutil.rmtree(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
+    if os.path.exists(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalog_filename)):
+        os.remove(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalog_filename))
 
-    if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id))):
-        shutil.rmtree(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
+    if os.path.exists(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename)):
+        os.remove(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename))
+
+    if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename + '.png')):
+        os.remove(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename + '.png'))
 
     if os.path.exists(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id))):
         shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))

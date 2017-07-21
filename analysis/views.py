@@ -232,7 +232,9 @@ def process_metadata(request, file_id):
 
             observation.orignal_filter = inhdulist[0].header[device.filter_card]
 
-            general.process_metadata_db(inhdulist, fits_file)
+            observation.save()
+
+            general.process_metadata_db(inhdulist, fits_file, request)
 
             observation.save()
             return redirect('process')
@@ -378,7 +380,7 @@ def process_metadata_modify(request, file_id):
             inhdulist = fits.get_hdu_list(
                 os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
 
-            general.process_metadata_db(inhdulist, fits_file)
+            general.process_metadata_db(inhdulist, fits_file, request)
 
             observation.save()
             return redirect('process')
@@ -437,7 +439,7 @@ def process_astrometry(request, file_id):
         raise PermissionDenied
 
     # Run the astrometry process for the file
-    astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename),
+    astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
                              str(fits_file.id))
 
     # Let the user check whether astrometry was successful
@@ -608,7 +610,7 @@ def process_reprocess(request, file_id):
                 os.mkdir(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid)))
 
             # Move the FITS file back to an original temporary directory
-            shutil.move(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename),
+            shutil.move(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
                         os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
 
             general.delete_folders(fits_file)

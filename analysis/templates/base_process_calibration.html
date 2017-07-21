@@ -10,7 +10,7 @@
 
     {% if success == True or success == 'warning' %}
 
-        <img src="{{ PLOTS_URL }}/{{ file.id }}/calibrationb_{{ file.fits_filename }}.png?invalidate-cache={% now 'U' %}" width="800px">
+        <img src="{{ PLOTS_URL }}/{{ file.fits_filename }}.png?invalidate-cache={% now 'U' %}" width="800px">
 
         <br />
         <br />
@@ -22,7 +22,7 @@
         <form action="{% url 'process_calibration' file.id %}" method="POST" enctype="multipart/form-data">
             {% csrf_token %}
             <input type="hidden" name="correct" value="true">
-            <input type="submit" value="Calibration graphs appear correct" class="btn btn-primary">
+            <input type="submit" value="Calibration graphs appear correct" class="btn btn-success">
         </form>
 
     {% endif %}

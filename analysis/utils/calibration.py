@@ -119,7 +119,7 @@ def do_calibration(file_id, max_use, min_use):
 
     # read in FITS header of corresponding image and get observing date
     # which is stored in header 'TIMETIME' by the 'change_header.py' program
-    data, header = pyfits.getdata(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename),
+    data, header = pyfits.getdata(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
                                   header=True)
     time = header['DATE-OBS']
 
@@ -128,7 +128,7 @@ def do_calibration(file_id, max_use, min_use):
     ypix = header['NAXIS2']
 
     # Read in the second catalogue and create arrays with the data contained within it
-    secondcat = ascii.read(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id), fits_file.catalogue_filename))
+    secondcat = ascii.read(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalogue_filename))
 
     num_2 = secondcat['NUMBER']
     num_2 = num_2.astype(numpy.float32)
@@ -308,8 +308,6 @@ def do_calibration(file_id, max_use, min_use):
         print "RMS, offset"
         print rmscal, med_offset
 
-        # Create the needed plots directory
-        os.mkdir(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
 
         fig = plt.figure()
 
@@ -407,7 +405,7 @@ def do_calibration(file_id, max_use, min_use):
         fig.set_size_inches(7, 8)
 
         # Save the calibration plot to the plots directory
-        fig.savefig(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id), 'calibrationb_' + fits_file.fits_filename
+        fig.savefig(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename
                                  + '.png'), format='png', bbox_inches='tight', dpi=600)
         # Purge figure from memory
         fig.clf()
@@ -468,8 +466,8 @@ def do_calibration(file_id, max_use, min_use):
         # software to analyse data
 
         # set filename for output catalogue
-        phot_cal = os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id),
-                                fits_file.fits_filename + '_calibrated.cat')
+        phot_cal = os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY,
+                                fits_file.fits_filename + '.cat')
         # open file for writing
         photcalfile = open(phot_cal, 'w')
 
