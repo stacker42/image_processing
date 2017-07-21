@@ -9,7 +9,7 @@
     {% if files|length > 0 %}
         <table class="table table-striped">
         {% for f in files %}
-            <tr><td>[{{f.id }}] {{ f.fits_filename }}</td>
+            <tr><td>[{{f.id }}] {{ f.fits_filename }} {% if f.original_filename %}({{ f.original_filename }}){% endif %}</td>
                 <td><a class="btn btn-primary" {% if f.process_status != 'UPLOADED' and f.process_status != 'DEVICESETUP' %} disabled="true" {% else %} href="{% url 'process_observation' f.id %}" onclick="loading()" {% endif %}>Observation target</a></td>
                 <td><a class="btn btn-primary" {% if f.process_status != 'OBSERVATION' %} disabled="true" {% else %} href="{% url 'process-metadata' f.id %}" onclick="loading()" {% endif %}>Metadata</a></td>
                 <td><a class="btn btn-primary" {% if f.process_status != 'METADATA' and f.process_status != 'CHECK_ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_astrometry' f.id %}" onclick="loading()" {% endif %}>Astrometric Calibration</a></td>
