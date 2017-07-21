@@ -81,10 +81,10 @@ def process_observation(request, file_id):
             fits_file.process_status = 'OBSERVATION'
             fits_file.save()
 
-            observations = Observation.objects.filter(device=form.cleaned_data['device'])
+            observations_count = Observation.objects.filter(device=form.cleaned_data['device']).count()
 
             # If more than one observation has been made with this device, then go to the next stage
-            if len(observations) > 1:
+            if observations_count > 1:
                 return redirect('process')
             else:
                 # Otherwise... we need to set up some header cards for the device
@@ -286,26 +286,7 @@ def process_metadata(request, file_id):
         valid = False
         filterval = ''
 
-    filterval = filterval.upper()
-
-    # Look through all the possible filters the user could use and narrow it down into the 7 categories that we
-    # calibrate with. If we can't find their filter in any of these - then the image can't be used on this site.
-    if filterval in settings.CV_FILTERS:
-        used_filter = 'CV'
-    elif filterval in settings.U_FILTERS:
-        used_filter = 'U'
-    elif filterval in settings.B_FILTERS:
-        used_filter = 'B'
-    elif filterval in settings.V_FILTERS:
-        used_filter = 'V'
-    elif filterval in settings.R_FILTERS:
-        used_filter = 'R'
-    elif filterval in settings.I_FILTERS:
-        used_filter = 'I'
-    elif filterval in settings.SZ_FILTERS:
-        used_filter = 'SZ'
-    else:
-        used_filter = None
+    used_filter = general.get_used_filter(filterval)
 
     found = []
     for f in os.listdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number))):
@@ -374,24 +355,7 @@ def process_metadata_modify(request, file_id):
 
             observation.exptime = form.cleaned_data['exptime']
 
-            filterval = form.cleaned_data['filter'].upper()
-
-            if filterval in settings.CV_FILTERS:
-                used_filter = 'CV'
-            elif filterval in settings.U_FILTERS:
-                used_filter = 'U'
-            elif filterval in settings.B_FILTERS:
-                used_filter = 'B'
-            elif filterval in settings.V_FILTERS:
-                used_filter = 'V'
-            elif filterval in settings.R_FILTERS:
-                used_filter = 'R'
-            elif filterval in settings.I_FILTERS:
-                used_filter = 'I'
-            elif filterval in settings.SZ_FILTERS:
-                used_filter = 'SZ'
-            else:
-                used_filter = None
+            used_filter = general.get_used_filter(form.cleaned_data['filter'])
 
             if used_filter is None:
                 form.add_error('filter', "You must choose a valid filter")
@@ -640,16 +604,6 @@ def process_reprocess(request, file_id):
             except ObjectDoesNotExist:
                 pass  # We don't care if they don't exist, we're deleting them anyway
 
-            # Remove all folders we drop during analysis
-            if os.path.exists(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id))):
-                shutil.rmtree(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id)))
-
-            if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id))):
-                shutil.rmtree(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
-
-            if os.path.exists(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id))):
-                shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))
-
             if not os.path.exists(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid))):
                 os.mkdir(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid)))
 
@@ -657,8 +611,7 @@ def process_reprocess(request, file_id):
             shutil.move(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id), fits_file.fits_filename),
                         os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
 
-            if os.path.exists(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id))):
-                shutil.rmtree(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
+            general.delete_folders(fits_file)
 
             fits_file.process_status = 'UPLOADED'
 
@@ -883,18 +836,7 @@ def delete_file(request, file_id):
         except ObjectDoesNotExist:
             pass  # We don't care if they don't exist, we're deleting them anyway
 
-        # Remove all folders we drop during analysis
-        if os.path.exists(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id))):
-            shutil.rmtree(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id)))
-
-        if os.path.exists(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id))):
-            shutil.rmtree(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
-
-        if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id))):
-            shutil.rmtree(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
-
-        if os.path.exists(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id))):
-            shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))
+        general.delete_folders(fits_file)
 
         # Finally, delete the file from the DB
         fits_file.delete()

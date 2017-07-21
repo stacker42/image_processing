@@ -54,3 +54,51 @@ def process_metadata_db(inhdulist, fits_file):
     fits_file.process_status = 'METADATA'
 
     fits_file.save()
+
+
+def get_used_filter(filterval):
+    """
+    Get the filter that we will use for calibration
+    :param filterval: The user entered filter name
+    :return: The filter will will use
+    """
+    filterval = filterval.upper()
+    if filterval in settings.CV_FILTERS:
+        used_filter = 'CV'
+    elif filterval in settings.U_FILTERS:
+        used_filter = 'U'
+    elif filterval in settings.B_FILTERS:
+        used_filter = 'B'
+    elif filterval in settings.V_FILTERS:
+        used_filter = 'V'
+    elif filterval in settings.R_FILTERS:
+        used_filter = 'R'
+    elif filterval in settings.I_FILTERS:
+        used_filter = 'I'
+    elif filterval in settings.SZ_FILTERS:
+        used_filter = 'SZ'
+    else:
+        used_filter = None
+
+    return used_filter
+
+
+def delete_folders(fits_file):
+    """
+    Delete folders dropped during processing
+    :param fits_file: A FITSFile object
+    :return:
+    """
+
+    # Remove all folders we drop during analysis
+    if os.path.exists(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id))):
+        shutil.rmtree(os.path.join(settings.CATALOGUE_DIRECTORY, str(fits_file.id)))
+
+    if os.path.exists(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id))):
+        shutil.rmtree(os.path.join(settings.FITS_DIRECTORY, str(fits_file.id)))
+
+    if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id))):
+        shutil.rmtree(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
+
+    if os.path.exists(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id))):
+        shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))
