@@ -60,6 +60,7 @@
     <footer>
         <hr>
         <div align="center">
+            {% if user.is_authenticated %}<p>Need help? Contact <b>df @ star.kent.ac.uk</b></p>{% endif %}
             <p>HOYS-CAPS Processing Portal <br />University of Kent</p>
             <p>Copyright &copy; {% now 'Y' %}</p>
         </div>
