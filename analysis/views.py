@@ -758,11 +758,11 @@ def modify_device(request, id):
             form.save()
             return redirect('accounts_profile')
         else:
-            return render(request, "base_add_device.html", {'form': form})
+            return render(request, "base_modify_device.html", {'form': form})
     else:
         form = ImagingDeviceForm(instance=imaging_device)
 
-        return render(request, "base_add_device.html", {'form': form})
+        return render(request, "base_modify_device.html", {'form': form, 'device': imaging_device})
 
 
 @login_required
