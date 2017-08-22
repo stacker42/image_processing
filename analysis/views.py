@@ -735,8 +735,11 @@ def modify_object(request, id):
     else:
         form = ObjectForm(instance=object)
         form.fields['number'].disabled = True  # We disable editing the object number because it will mess up everything
+	
+	if os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']))):
+	    pass		
 
-        return render(request, "base_add_object.html", {'form': form})
+        return render(request, "base_add_object.html", {'form': form, 'object': object, })
 
 
 @login_required
