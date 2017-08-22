@@ -714,7 +714,10 @@ def modify_object(request, id):
     files = [n[3:].replace('.cat', '') for n in files]
 
     if request.method == "POST":
-        form = ObjectForm(request.POST, instance=object)
+        post_data = request.POST.copy()
+        post_data['number'] = object.number
+
+        form = ObjectForm(post_data, instance=object)
         if form.is_valid():
             form.save()
 
