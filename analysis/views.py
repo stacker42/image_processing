@@ -706,6 +706,13 @@ def modify_object(request, id):
 
     catalog_files = ['cf_CV', 'cf_U', 'cf_B', 'cf_V', 'cf_R', 'cf_I', 'cf_SZ']
 
+    if os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(object.number))):
+        files = os.listdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(object.number)))
+    else:
+        files = []
+
+    files = [n[3:].replace('.cat', '') for n in files]
+
     if request.method == "POST":
         form = ObjectForm(request.POST, instance=object)
         if form.is_valid():
@@ -731,15 +738,12 @@ def modify_object(request, id):
             return redirect('objects')
 
         else:
-            return render(request, "base_add_object.html", {'form': form})
+            return render(request, "base_modify_object.html", {'form': form, 'object': object, 'files': files})
     else:
         form = ObjectForm(instance=object)
         form.fields['number'].disabled = True  # We disable editing the object number because it will mess up everything
-	
-	if os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']))):
-	    pass		
 
-        return render(request, "base_add_object.html", {'form': form, 'object': object, })
+        return render(request, "base_modify_object.html", {'form': form, 'object': object, 'files': files})
 
 
 @login_required
