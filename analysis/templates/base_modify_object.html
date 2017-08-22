@@ -25,7 +25,7 @@
         <p class="error">{{ error }}</p>
     {% endif %}
 
-    <form method="POST" action="{% url 'base_modify_object' object.number %}" enctype="multipart/form-data">
+    <form method="POST" action="{% url 'modify_object' object.number %}" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
 
