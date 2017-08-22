@@ -368,7 +368,7 @@ def process_metadata_modify(request, file_id):
 
             found = []
             for f in os.listdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number))):
-                if f[3:].strip('.cat') != used_filter:
+                if f[3:].replace('.cat', '') != used_filter:
                     found.append(False)
                 else:
                     found.append(True)
@@ -382,6 +382,8 @@ def process_metadata_modify(request, file_id):
 
             inhdulist = fits.get_hdu_list(
                 os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
+
+            observation.save()
 
             general.process_metadata_db(inhdulist, fits_file, request)
 
