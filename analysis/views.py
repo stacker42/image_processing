@@ -634,6 +634,8 @@ def add_object(request):
             if not os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']))):
                 os.mkdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number'])))
 
+                object = form.save()
+
                 # Go though all possible catalog file combinations and see if the user picked one. If they did, create
                 # the file
                 for name, cat_file in submitted_cats.iteritems():
@@ -647,7 +649,11 @@ def add_object(request):
                             f.write(cat_file.read())
                             f.close()
 
-                form.save()
+                        # Add information about this file to the database
+                        setattr(object, name, True)
+                        setattr(object, name + '_original', cat_file.name)
+
+                object.save()
                 # Give the user a fresh form
                 newform = ObjectForm()
 
@@ -706,12 +712,12 @@ def modify_object(request, id):
 
     catalog_files = ['cf_CV', 'cf_U', 'cf_B', 'cf_V', 'cf_R', 'cf_I', 'cf_SZ']
 
-    if os.path.exists(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(object.number))):
-        files = os.listdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(object.number)))
-    else:
-        files = []
+    catalog_files_and_names = {}
 
-    files = [n[3:].replace('.cat', '') for n in files]
+    for cat in catalog_files:
+        original_filename = getattr(object, cat + '_original', False)
+        if original_filename is not (None or ''):
+            catalog_files_and_names[cat.replace('cf_', '')] = original_filename
 
     if request.method == "POST":
         post_data = request.POST.copy()
@@ -731,6 +737,7 @@ def modify_object(request, id):
 
                 # make sure we only try and write catalog files that the user uploaded
                 if cat_file is not None:
+                    print 'yooooooo'
                     path = os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']),
                                         catalog_file + '.cat')
                     # Write the catalog file to disk under the new name
@@ -738,15 +745,23 @@ def modify_object(request, id):
                         f.write(cat_file.read())
                         f.close()
 
+                    print catalog_file
+                    print cat_file.name
+
+                    # Add information about this file to the database
+                    setattr(object, catalog_file + '_original', cat_file.name)
+
+                    object.save()
+
             return redirect('objects')
 
         else:
-            return render(request, "base_modify_object.html", {'form': form, 'object': object, 'files': files})
+            return render(request, "base_modify_object.html", {'form': form, 'object': object, 'catalog_files_and_names': catalog_files_and_names})
     else:
         form = ObjectForm(instance=object)
         form.fields['number'].disabled = True  # We disable editing the object number because it will mess up everything
 
-        return render(request, "base_modify_object.html", {'form': form, 'object': object, 'files': files})
+        return render(request, "base_modify_object.html", {'form': form, 'object': object, 'catalog_files_and_names': catalog_files_and_names})
 
 
 @login_required

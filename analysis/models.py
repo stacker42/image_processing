@@ -37,6 +37,13 @@ class Object(models.Model):
     ra = models.CharField(max_length=255)
     dec = models.CharField(max_length=255)
     cal_offset = models.FloatField()  # used in calibration
+    cf_CV_original = models.CharField(max_length=255, null=True, blank=True)
+    cf_U_original = models.CharField(max_length=255, null=True, blank=True)
+    cf_B_original = models.CharField(max_length=255, null=True, blank=True)
+    cf_V_original = models.CharField(max_length=255, null=True, blank=True)
+    cf_R_original = models.CharField(max_length=255, null=True, blank=True)
+    cf_I_original = models.CharField(max_length=255, null=True, blank=True)
+    cf_SZ_original = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         db_table = "objects"

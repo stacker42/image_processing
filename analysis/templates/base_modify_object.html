@@ -29,9 +29,15 @@
         {% csrf_token %}
         {{ form.as_p }}
 
-        <p>Please choose catalog files appropriate to this object. You must choose at least one.</p>
-        <p>Note: If you are editing an object, any files you add here will overwrite existing ones.</p>
-        <p>The following catalog files have already been uploaded: {{ files|join:', ' }}</p>
+        <p>The following catalog files have already been uploaded: <b><br />
+        <ul>
+            {% for key, value in catalog_files_and_names.items %}
+                    <li> {{ key }} - {{ value }}</li>
+            {% endfor %}
+        </ul></b>
+
+        <p><b>If you are editing an object, any files you add here will overwrite existing ones. You do not need to add any files here if you wish.</b></p>
+
         <label for="cf_CV">Choose a clear catalog file (CV)</label>
         <input type="file" class="btn btn-default btn-file" name="cf_CV">
 
