@@ -25,8 +25,8 @@ class ObjectForm(forms.ModelForm):
     class Meta:
         model = Object
         fields = ('number', 'name', 'ra', 'dec', 'cal_offset')
-        labels = {'number': 'Unique object number', 'ra': 'Right Ascension ([±]HH MM SS)', 'dec':
-                  'Declination ([±]HH MM SS)', 'cal_offset': 'Calibration offset'}
+        labels = {'number': 'Unique object number', 'ra': 'Right Ascension (J2000) (HH MM SS)', 'dec':
+                  'Declination (J2000) ([±]Deg ArcMin ArcSec)', 'cal_offset': 'Calibration offset'}
 
 
 class ObservationForm(forms.ModelForm):

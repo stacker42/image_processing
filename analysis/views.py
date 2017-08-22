@@ -654,10 +654,8 @@ def add_object(request):
                         setattr(object, name + '_original', cat_file.name)
 
                 object.save()
-                # Give the user a fresh form
-                newform = ObjectForm()
 
-                return render(request, "base_add_object.html", {'form': newform})
+                return redirect('objects')
             else:
                 form.add_error('number', 'Number is not unique')
                 return render(request, "base_add_object.html", {'form': form})
