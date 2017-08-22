@@ -799,9 +799,22 @@ def manage_files(request):
     :return:
     """
 
-    files_list = FITSFile.objects.all().order_by('upload_time').reverse()
+    sortby = request.GET.get('sortby')
 
-    paginator = Paginator(files_list, 100)  # Show 25 contacts per page
+    if sortby == 'name':
+        order_by = 'fits_filename'
+    elif sortby == 'uploaded_by':
+        order_by = 'uploaded_by'
+    elif sortby == 'time':
+        order_by = 'upload_time'
+    elif sortby == 'current_status':
+        order_by = 'process_status'
+    else:
+        order_by = '-upload_time'
+
+    files_list = FITSFile.objects.all().order_by(order_by)
+
+    paginator = Paginator(files_list, 100)
 
     page = request.GET.get('page')
     try:
@@ -817,6 +830,7 @@ def manage_files(request):
 
 
 @login_required
+@csrf_exempt
 def delete_file(request, file_id):
     """
     Let administrators delete any file, or users delete one of their own files. Will remove all information relating to
