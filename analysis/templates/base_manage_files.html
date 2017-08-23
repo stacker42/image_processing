@@ -52,6 +52,7 @@
         if (confirm('You are about to delete ' + filename +', are you sure?')) {
             $.post(url);
             alert('File deleted')
+            location.reload();
         } else {
             alert('File not deleted')
         }
