@@ -104,17 +104,19 @@ def delete_folders(fits_file):
     """
 
     # Remove all folders we drop during analysis
-    if os.path.exists(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalogue_filename)) and (fits_file.catalogue_filename is not (None, '')):
-        os.remove(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalogue_filename))
+    if fits_file.catalogue_filename != '':
+        if os.path.exists(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalogue_filename)):
+            os.remove(os.path.join(settings.CATALOGUE_ORIGINAL_DIRECTORY, fits_file.catalogue_filename))
 
-    if os.path.exists(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalogue_filename)) and (fits_file.catalogue_filename is not (None, '')):
-        os.remove(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalogue_filename))
+        if os.path.exists(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalogue_filename)):
+            os.remove(os.path.join(settings.CATALOGUE_PROCESSED_DIRECTORY, fits_file.catalogue_filename))
 
-    if os.path.exists(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename)):
-        os.remove(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename))
+    if fits_file.fits_filename != '':
+        if os.path.exists(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename)):
+            os.remove(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename))
 
-    if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename + '.png')):
-        os.remove(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename + '.png'))
+        if os.path.exists(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename + '.png')):
+            os.remove(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename + '.png'))
 
     if os.path.exists(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id))):
         shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))

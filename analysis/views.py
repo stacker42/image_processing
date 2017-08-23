@@ -848,6 +848,17 @@ def delete_file(request, file_id):
         if (fits_file.uploaded_by != request.user) and (not request.user.is_staff):
             raise PermissionDenied
 
+        if fits_file.process_status in ['OBSERVATION', 'DEVICESETUP', 'UPLOADED']:
+            # Fixes bug where we try and delete files that haven't been moved yet.
+            upload.handle_deleted_file(str(fits_file.uuid))
+            try:
+                observation = Observation.objects.get(fits=fits_file)
+                observation.delete()
+            except ObjectDoesNotExist:
+                pass  # We don't care if they don't exist, we're deleting them anyway
+            fits_file.delete()
+            return render(request, "base_delete_file.html")
+
         try:
             observation = Observation.objects.get(fits=fits_file)
             Photometry.objects.filter(observation=observation).delete()
