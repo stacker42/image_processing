@@ -18,6 +18,7 @@ from django.contrib import admin
 from analysis import views
 from django.conf.urls.static import static
 from django.conf import settings
+from django.contrib.auth.views import password_reset_confirm, password_reset_complete, password_change, password_change_done
 
 
 urlpatterns = [
@@ -43,6 +44,9 @@ urlpatterns = [
     url(r'^objects/$', views.objects, name='objects'),
     url(r'^upload(?:/(?P<qquuid>\S+))?', views.UploadView.as_view(), name='upload'),
     url(r'^accounts/', include('registration.backends.default.urls')),
+    url(r'^accounts/password/reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
+        password_reset_confirm, name='password_reset_confirm'),
+    url(r'^accounts/password/reset/complete/$', password_reset_complete, name='password_reset_complete'),
     url(r'^manage/files/$', views.manage_files, name='manage_files'),
     url(r'delete/file/(?P<file_id>[0-9]+)/$', views.delete_file, name='delete_file'),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.ASTROMETRY_URL, document_root='temporary/astrometry/') + static(settings.PLOTS_URL, document_root='data/plots')
