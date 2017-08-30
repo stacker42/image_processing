@@ -10,9 +10,9 @@
     <h1>All files and their current status</h1>
 
     <table class="table table-striped">
-        <tr><th><a href="{% query_transform request sortby='name' %}">Name</a></th><th><a href="{% query_transform request sortby='uploaded_by' %}">Uploaded By</a></th><th><a href="{% query_transform request sortby='current_status' %}">Current Status</a></th><th><a href="{% query_transform request sortby='time' %}">Uploaded Time</a></th><th>Action</th></tr>
+        <tr><th>Name <a href="{% query_transform request sortby='name' %}">&uarr;</a> <a href="{% query_transform request sortby='name_rev' %}">&darr;</a></th><th>Uploaded By <a href="{% query_transform request sortby='uploaded_by' %}">&uarr;</a> <a href="{% query_transform request sortby='uploaded_by_rev' %}">&darr;</a></th><th>Current Status <a href="{% query_transform request sortby='current_status' %}">&uarr;</a> <a href="{% query_transform request sortby='current_status_rev' %}">&darr;</a></th><th>Uploaded Time <a href="{% query_transform request sortby='time' %}">&uarr;</a> <a href="{% query_transform request sortby='time_rev' %}">&darr;</a></th><th>Action</th></tr>
         {% for file in files %}
-            <tr><td>{{ file.fits_filename }}</td><td>{{ file.uploaded_by.username }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time|timestamp_to_human }}</td><td><form action="{% url 'process_reprocess' file.id %}" enctype="multipart/form-data" method="POST">{% csrf_token %}<input type="hidden" name="reprocess" value="true"><input type="submit" value="Reprocess" class="btn btn-danger"></form><a href="javascript:delConfirm('{% url 'delete_file' file.id %}','{{ file.fits_filename }}');" class="btn btn-danger">Delete</a></td></tr>
+            <tr><td>{{ file.fits_filename }}</td><td>{{ file.uploaded_by.username }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time|timestamp_to_human }}</td><td><a href="javascript:reprocessConfirm('{% url 'process_reprocess' file.id %}','{{ file.fits_filename }}');" class="btn btn-danger">Reprocess</a><a href="javascript:delConfirm('{% url 'delete_file' file.id %}','{{ file.fits_filename }}');" class="btn btn-danger">Delete</a></td></tr>
         {% endfor %}
     </table>
 
@@ -51,10 +51,14 @@
     function delConfirm(url,filename) {
         if (confirm('You are about to delete ' + filename +', are you sure?')) {
             $.post(url);
-            alert('File deleted')
             location.reload();
-        } else {
-            alert('File not deleted')
+        }
+    }
+
+    function reprocessConfirm(url,filename) {
+        if (confirm('You are about to reprocess ' + filename +', are you sure?')) {
+            $.post(url);
+            location.reload();
         }
     }
 

@@ -345,10 +345,6 @@ def do_calibration(file_id, max_use, min_use):
         # Calibrated magnitudes
         cal_mag = fitfunc_cal(param_cal, match_mag[:])
 
-        # Zero line of blue dots
-        axis2.scatter(cal_mag[check[0]], 0 * cal_mag[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8,
-                      label='Zero line')
-
         # Conditions for the dots to be plotted - magnitude less than 30 but greater than 5
         check_plot = numpy.where((cal_mag[:] < 30) & (cal_mag[:] > 5))
 
@@ -365,6 +361,12 @@ def do_calibration(file_id, max_use, min_use):
         axis2.scatter(cal_mag[check[0]], mag_m[check[0]] - cal_mag[check[0]], s=5, c="red",
                     edgecolor='black', alpha=0.8, label='Calibrated magnitudes')
 
+        axis2.scatter()
+
+
+        # Zero line of blue dots
+        axis2.scatter(cal_mag[check[0]], 0 * cal_mag[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8,
+                      label='Zero line')
 
         # Max use line
         axis2.axvline(x=fitfunc_cal(param_cal, max_use), c='green', label='max_use')
@@ -390,16 +392,6 @@ def do_calibration(file_id, max_use, min_use):
         axis2.set_xlabel('Calibrated Magnitude [mag]')
 
         axis2.legend(loc='center', bbox_to_anchor=(0.5, -0.25), ncol=5, fontsize='x-small')
-
-        fig.tight_layout()
-        fig.set_size_inches(7, 8)
-
-        # Save the calibration plot to the plots directory
-        fig.savefig(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename
-                                 + '.png'), format='png', bbox_inches='tight', dpi=600)
-        # Purge figure from memory
-        fig.clf()
-
 
         # fill in the main arrays with the data from the catalogue,
         # but only for good matches, and use corrected magnitudes
@@ -439,7 +431,21 @@ def do_calibration(file_id, max_use, min_use):
                 rms = numpy.nanstd(diff_mag[check_within_1mag[0]])
                 uncertainty_stars[i] = rms
 
+        axis2.scatter(cal_mag[check[0]], uncertainty_stars[:], s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1,
+                      label='_nolegend_')
+
         print numpy.average(uncertainty_stars)
+
+        # We've moved the image generation down here as we want to add the rms points to the graph too.
+        fig.tight_layout()
+        fig.set_size_inches(7, 8)
+
+        # Save the calibration plot to the plots directory
+        fig.savefig(os.path.join(settings.PLOTS_DIRECTORY, fits_file.fits_filename
+                                 + '.png'), format='png', bbox_inches='tight', dpi=600)
+        # Purge figure from memory
+        fig.clf()
+
 
         # determine the limiting magnitude of each image
         binsies = numpy.zeros(80, dtype=numpy.float32).reshape(80)

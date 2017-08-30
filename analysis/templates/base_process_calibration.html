@@ -51,7 +51,7 @@
     <form action="{% url 'process_calibration' file.id %}" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="incorrect" value="true">
-        <input type="submit" value="Calibration graphs appear incorrect/do not exist" class="btn btn-danger">
+        <input type="submit" value="Calibration graphs appear incorrect/do not exist, delete file" class="btn btn-danger">
     </form>
 
 {% endblock %}

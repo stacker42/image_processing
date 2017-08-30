@@ -13,7 +13,7 @@
         <tr><td>Observation date [{{ device.date_card }}]({{ device.date_format }})</td><td>{{ date }}</td></tr>
         {% if device.time_card != None %}<tr><td>Observation time [{{ device.time_card }}]</td><td>{{ time }}</td></tr>{% endif %}
         <tr><td>Filter [{{ device.filter_card }}]</td><td>{{ filter }} [{{ used_filter }}]</td></tr>
-        <tr><td>Exposure time [{{ device.exptime_card }}]</td><td>{{ exptime }}</td></tr>
+        <tr><td>Exposure time (s) [{{ device.exptime_card }}]</td><td>{{ exptime }}</td></tr>
 
     </table>
 

@@ -94,8 +94,12 @@ def do_astrometry(path, file_id):
 
     subprocess.check_output(solve_command)
 
-    # Move our solved image to the location of the exiting image
-    shutil.move(j(WORKING_DIRECTORY, "in.new"), path)
+    try:
+        # Move our solved image to the location of the exiting image
+        shutil.move(j(WORKING_DIRECTORY, "in.new"), path)
+    except IOError:
+        # The astrometry failed
+        return False
 
     # Make a JPEG that we can show the user in their browser
     imagemagick_command = ['convert', 'in-objs.png', '-resize', '40%', 'in-objs.jpg']

@@ -444,11 +444,14 @@ def process_astrometry(request, file_id):
         raise PermissionDenied
 
     # Run the astrometry process for the file
-    astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
-                             str(fits_file.id))
+    if astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
+                             str(fits_file.id)):
 
-    # Let the user check whether astrometry was successful
-    fits_file.process_status = 'CHECK_ASTROMETRY'
+        # Let the user check whether astrometry was successful
+        fits_file.process_status = 'CHECK_ASTROMETRY'
+    else:
+        # Astrometry failed during execution
+        fits_file.process_status = 'FAILED'
 
     fits_file.save()
 
@@ -803,12 +806,24 @@ def manage_files(request):
 
     if sortby == 'name':
         order_by = 'fits_filename'
+    elif sortby == 'name_rev':
+        order_by = '-fits_filename'
+
     elif sortby == 'uploaded_by':
         order_by = 'uploaded_by'
+    elif sortby == 'uploaded_by_rev':
+        order_by = '-uploaded_by'
+
     elif sortby == 'time':
         order_by = 'upload_time'
+    elif sortby == 'time_rev':
+        order_by = '-upload_time'
+
     elif sortby == 'current_status':
         order_by = 'process_status'
+    elif sortby == 'current_status_rev':
+        order_by = '-process_status'
+
     else:
         order_by = '-upload_time'
 
@@ -885,6 +900,31 @@ def accounts_profile(request):
     :param request:
     :return:
     """
+
+    sortby = request.GET.get('sortby')
+
+    if sortby == 'name':
+        order_by = 'fits_filename'
+    elif sortby == 'name_rev':
+        order_by = '-fits_filename'
+
+    if sortby == 'origname':
+        order_by = 'original_filename'
+    elif sortby == 'origname_rev':
+        order_by = '-original_filename'
+
+    elif sortby == 'time':
+        order_by = 'upload_time'
+    elif sortby == 'time_rev':
+        order_by = '-upload_time'
+
+    elif sortby == 'current_status':
+        order_by = 'process_status'
+    elif sortby == 'current_status_rev':
+        order_by = '-process_status'
+
+    else:
+        order_by = '-upload_time'
 
     devices = ImagingDevice.objects.filter(user=request.user)
     # Get all the files that have been processed by a user, but only if they have been completed successfully or failed

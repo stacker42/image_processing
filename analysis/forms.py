@@ -53,7 +53,7 @@ class MetadataForm(forms.Form):
     date_format = forms.ChoiceField(choices=DATE_FORMAT_CHOICES)
     date = forms.CharField(max_length=255, label="Date of observation")
     time = forms.CharField(max_length=255, label="Time of observation", required=False)
-    exptime = forms.FloatField(label="Exposure time")
+    exptime = forms.FloatField(label="Exposure time (s)")
     filter = forms.CharField(max_length=255, label="Filter")
 
 

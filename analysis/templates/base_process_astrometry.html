@@ -8,6 +8,8 @@
 
     {% load staticfiles %}
 
+    {% if file.process_status != 'FAILED' %}
+
     <a href="{{ ASTROMETRY_URL }}/{{ file.id }}/in-objs.jpg"><img src="{{ ASTROMETRY_URL }}/{{ file.id }}/in-objs.jpg" width="800px"><a/>
 
     <br />
@@ -19,6 +21,8 @@
     <input type="submit" value="Astrometry has correctly identified objects" class="btn btn-success">
     </form>
     <br />
+
+    {% endif %}
     <form action="{% url 'process_astrometry' file.id %}" method="POST" enctype="multipart/form-data">
     {% csrf_token %}
         <input type="hidden" name="correct" value="false">

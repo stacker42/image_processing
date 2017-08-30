@@ -25,7 +25,7 @@
     <h2>Processed files</h2>
         {% if processed_files|length > 0 %}
             <table class="table table-striped">
-                <tr><th>Name</th><th>Original Name</th><th>Current Status</th><th>Uploaded Time</th></tr>
+                <tr><th>Name <a href="{% query_transform request sortby='name' %}">&uarr;</a> <a href="{% query_transform request sortby='name_rev' %}">&darr;</a></th><th>Original Name <a href="{% query_transform request sortby='origname' %}">&uarr;</a> <a href="{% query_transform request sortby='origname_rev' %}">&darr;</a></th><th>Current Status <a href="{% query_transform request sortby='current_status' %}">&uarr;</a> <a href="{% query_transform request sortby='current_status_rev' %}">&darr;</a></th><th>Uploaded Time <a href="{% query_transform request sortby='time' %}">&uarr;</a> <a href="{% query_transform request sortby='time_rev' %}">&darr;</a></th></tr>
                 {% for file in processed_files %}
                 <tr><td>{{ file.fits_filename }}</td><td>{{ file.original_filename }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time|timestamp_to_human }}</td></tr>
                 {% endfor %}
@@ -38,7 +38,7 @@
     <div class="pagination">
     <span class="step-links">
         {% if processed_files.has_previous %}
-            <a href="?page={{ processed_files.previous_page_number }}">previous</a>
+            <a href="{% query_transform request page=processed_files.previous_page_number %}">previous</a>
         {% endif %}
 
         <span class="current">
@@ -46,7 +46,7 @@
         </span>
 
         {% if contacts.has_next %}
-            <a href="?page={{ processed_files.next_page_number }}">next</a>
+            <a href="{% query_transform request page=processed_files.next_page_number %}">next</a>
         {% endif %}
     </span>
 </div>
