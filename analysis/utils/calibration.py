@@ -311,11 +311,11 @@ def do_calibration(file_id, max_use, min_use):
 
         # 0 line of blue dots
         axis1.scatter(match_mag[check[0]], med_offset + 0 * mag_m[check[0]], s=5, c="blue", edgecolor='black',
-                      alpha=0.8, label='Zero line')
+                      alpha=0.8, label='Zero line', lw=0.2)
 
         # Original data plot scatter
         axis1.scatter(match_mag[check[0]], mag_m[check[0]] - match_mag[check[0]], s=5, c="black", edgecolor='black',
-                      alpha=0.8, label='Original data')
+                      alpha=0.8, label='Original data', lw=0.2)
         # Max use line
         axis1.axvline(x=max_use, c='green', label='max_use')
 
@@ -350,7 +350,7 @@ def do_calibration(file_id, max_use, min_use):
 
         # Scatter plot of calibrated magnitudes (sensible magnitudes)
         axis2.scatter(cal_mag[check_plot[0]], mag_m[check_plot[0]] - cal_mag[check_plot[0]], s=1, c="black",
-                    edgecolor='black', alpha=0.8, label='Calibrated magnitudes (<30 & >5)')
+                    edgecolor='black', alpha=0.8, label='Calibrated magnitudes (<30 & >5)', lw=0.2)
 
         # Set up some arrays to use later in the file writing stage, with good data
         mag_m_good = mag_m[check[0]]
@@ -359,14 +359,12 @@ def do_calibration(file_id, max_use, min_use):
 
         # Scatter plot of calibrated magnitudes between min and max mag
         axis2.scatter(cal_mag[check[0]], mag_m[check[0]] - cal_mag[check[0]], s=5, c="red",
-                    edgecolor='black', alpha=0.8, label='Calibrated magnitudes')
-
-        axis2.scatter()
+                    edgecolor='black', alpha=0.8, label='Calibrated magnitudes', lw=0.2)
 
 
         # Zero line of blue dots
         axis2.scatter(cal_mag[check[0]], 0 * cal_mag[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8,
-                      label='Zero line')
+                      label='Zero line', lw=0.2)
 
         # Max use line
         axis2.axvline(x=fitfunc_cal(param_cal, max_use), c='green', label='max_use')
@@ -390,8 +388,6 @@ def do_calibration(file_id, max_use, min_use):
 
         axis2.set_ylabel('Offset [mag]')
         axis2.set_xlabel('Calibrated Magnitude [mag]')
-
-        axis2.legend(loc='center', bbox_to_anchor=(0.5, -0.25), ncol=5, fontsize='x-small')
 
         # fill in the main arrays with the data from the catalogue,
         # but only for good matches, and use corrected magnitudes
@@ -431,8 +427,10 @@ def do_calibration(file_id, max_use, min_use):
                 rms = numpy.nanstd(diff_mag[check_within_1mag[0]])
                 uncertainty_stars[i] = rms
 
-        axis2.scatter(cal_mag[check[0]], uncertainty_stars[:], s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1,
-                      label='_nolegend_')
+        axis2.scatter(mag_array, uncertainty_stars, s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1,
+                      label='Uncertainty')
+
+        axis2.legend(loc='center', bbox_to_anchor=(0.5, -0.25), ncol=5, fontsize='x-small')
 
         print numpy.average(uncertainty_stars)
 

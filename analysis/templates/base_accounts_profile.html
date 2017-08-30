@@ -5,6 +5,7 @@
 {% block content %}
 
     {% load time %}
+    {% load query_transform %}
 
     <h1>My Profile</h1>
 
@@ -45,7 +46,7 @@
             Page {{ processed_files.number }} of {{ processed_files.paginator.num_pages }}.
         </span>
 
-        {% if contacts.has_next %}
+        {% if processed_files.has_next %}
             <a href="{% query_transform request page=processed_files.next_page_number %}">next</a>
         {% endif %}
     </span>

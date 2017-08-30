@@ -40,6 +40,7 @@
               <li><a href="{% url 'objects' %}">Objects</a></li>
               {% if user.is_staff %}
               <li><a href="{% url 'manage_files' %}">Manage Files</a></li>
+                  <li><a href="{% url 'admin:index' %}">Admin</a></li>
               {% endif %}
               <li><a href="{% url 'accounts_profile' %}">{{ request.user.username }}'s Profile</a></li>
               <li><a href="{% url 'auth_logout' %}">Logout</a></li>

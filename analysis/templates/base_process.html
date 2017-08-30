@@ -4,12 +4,14 @@
 
 {% block content %}
 
+    {% load query_transform %}
+
     <h1>Processing files</h1>
 
     {% if files|length > 0 %}
         <table class="table table-striped">
         {% for f in files %}
-            <tr><td>[{{f.id }}] {{ f.fits_filename }} {% if f.original_filename %}({{ f.original_filename }}){% endif %}</td>
+            <tr><td>[{{f.id }}] {{ f.fits_filename }} {% if f.original_filename %}({{ f.original_filename }}){% endif %} {% if request.user.is_staff %}[{{ f.uploaded_by }}]{% endif %}</td>
                 <td><a class="btn btn-primary" {% if f.process_status != 'UPLOADED' and f.process_status != 'DEVICESETUP' %} disabled="true" {% else %} href="{% url 'process_observation' f.id %}" onclick="loading()" {% endif %}>Observation target</a></td>
                 <td><a class="btn btn-primary" {% if f.process_status != 'OBSERVATION' %} disabled="true" {% else %} href="{% url 'process-metadata' f.id %}" onclick="loading()" {% endif %}>Metadata</a></td>
                 <td><a class="btn btn-primary" {% if f.process_status != 'METADATA' and f.process_status != 'CHECK_ASTROMETRY' %} disabled="true" {% else %} href="{% url 'process_astrometry' f.id %}" onclick="loading()" {% endif %}>Astrometric Calibration</a></td>
@@ -36,6 +38,23 @@
 
     </div>
   </div>
+
+    <div class="pagination">
+    <span class="step-links">
+        {% if files.has_previous %}
+            <a href="{% query_transform request page=files.previous_page_number %}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ files.number }} of {{ files.paginator.num_pages }}.
+        </span>
+
+        {% if files.has_next %}
+            <a href="{% query_transform request page=files.next_page_number %}">next</a>
+        {% endif %}
+    </span>
+    </div>
+
 
     <script>
 

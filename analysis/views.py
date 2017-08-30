@@ -38,10 +38,29 @@ def process(request):
     :param request:
     :return:
     """
-    files = FITSFile.objects.filter(uploaded_by=request.user).filter(~Q(process_status='COMPLETE') &
-                                                                     ~Q(process_status='FAILED') &
-                                                                     ~Q(process_status='FAILED_USER')
-                                                                     ).order_by('upload_time')
+
+    if not request.user.is_staff:
+        files_list = FITSFile.objects.filter(uploaded_by=request.user).filter(~Q(process_status='COMPLETE') &
+                                                                         ~Q(process_status='FAILED') &
+                                                                         ~Q(process_status='FAILED_USER')
+                                                                         ).order_by('upload_time')
+    else:
+        files_list = FITSFile.objects.filter(~Q(process_status='COMPLETE') &
+                                        ~Q(process_status='FAILED') &
+                                        ~Q(process_status='FAILED_USER')
+                                        ).order_by('upload_time')
+
+    paginator = Paginator(files_list, 100)
+
+    page = request.GET.get('page')
+    try:
+        files = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page.
+        files = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g. 9999), deliver last page of results.
+        files = paginator.page(paginator.num_pages)
 
     return render(request, "base_process.html", {'files': files})
 
@@ -60,7 +79,7 @@ def process_observation(request, file_id):
     except (ObjectDoesNotExist, ValueError):
         raise Http404
 
-    if fits_file.uploaded_by != request.user:
+    if (fits_file.uploaded_by != request.user) and (not request.user.is_staff):
         raise PermissionDenied
 
     print fits_file.process_status
@@ -77,7 +96,7 @@ def process_observation(request, file_id):
         form = ObservationForm(request.POST)
         if form.is_valid():
             obs = form.save(commit=False)  # Don't save object to DB just yet... we need to add more info
-            obs.user = request.user
+            obs.user = fits_file.uploaded_by
             obs.fits = fits_file
             obs.save()
 
@@ -98,7 +117,10 @@ def process_observation(request, file_id):
             return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
     else:
         form = ObservationForm()
-        form.fields['device'].queryset = ImagingDevice.objects.filter(user=request.user)
+        if not request.user.is_staff:
+            form.fields['device'].queryset = ImagingDevice.objects.filter(user=request.user)
+        else:
+            form.fields['device'].queryset = ImagingDevice.objects.all()
 
         return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
 
@@ -115,7 +137,7 @@ def process_devicesetup(request, file_id):
 
     fits_file = get_object_or_404(FITSFile, pk=file_id)
 
-    if fits_file.uploaded_by != request.user:
+    if (fits_file.uploaded_by != request.user) and (not request.user.is_staff):
         raise PermissionDenied
 
     if fits_file.process_status != 'DEVICESETUP':
@@ -190,7 +212,7 @@ def process_metadata(request, file_id):
 
     fits_file = get_object_or_404(FITSFile, pk=file_id)
 
-    if not request.user == fits_file.uploaded_by:
+    if (fits_file.uploaded_by != request.user) and (not request.user.is_staff):
         raise PermissionDenied
 
     if request.method == "POST":
@@ -242,16 +264,10 @@ def process_metadata(request, file_id):
             observation.save()
             return redirect('process')
 
-    # Only users of the file can process the header
-    if fits_file.uploaded_by != request.user:
-        raise PermissionDenied
-
     if fits_file.process_status != 'OBSERVATION':
         return render(request, "base_process_ooo.html")
 
     fits_hashes = FITSFile.objects.exclude(id=fits_file.id).values_list('sha256', flat=True)
-
-    print fits_hashes
 
     # Check if the file already exists on the system, and if it does, don't let the user go any furthur
     # (make them delete the file)
@@ -333,7 +349,7 @@ def process_metadata_modify(request, file_id):
     # See if this FITS file actually exists in our database
     fits_file = get_object_or_404(FITSFile, pk=file_id)
 
-    if not request.user == fits_file.uploaded_by:
+    if (request.user != fits_file.uploaded_by) and (not request.user.is_staff):
         raise PermissionDenied
 
     if request.method == "POST":
@@ -418,7 +434,7 @@ def process_astrometry(request, file_id):
         raise Http404
 
     if fits_file.process_status == 'CHECK_ASTROMETRY' and request.method == "POST" and \
-       request.user == fits_file.uploaded_by:
+            (request.user == fits_file.uploaded_by or request.user.is_staff):
         # The results of the user choice whether the action was successful or not.
 
         # They say it was successful!
@@ -434,14 +450,14 @@ def process_astrometry(request, file_id):
             fits_file.save()
             return redirect('process')
 
+    if (request.user != fits_file.uploaded_by) and (not request.user.is_staff):
+        raise PermissionDenied
+
     if fits_file.process_status == 'CHECK_ASTROMETRY':
         return render(request, "base_process_astrometry.html", {'file': fits_file})
 
     if fits_file.process_status != 'METADATA':
         return render(request, "base_process_ooo.html")
-
-    if request.user != fits_file.uploaded_by:
-        raise PermissionDenied
 
     # Run the astrometry process for the file
     if astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
@@ -473,11 +489,11 @@ def process_calibration(request, file_id):
     except (ObjectDoesNotExist, ValueError):
         raise Http404
 
-    if request.user != fits_file.uploaded_by:
+    if (request.user != fits_file.uploaded_by) and (not request.user.is_staff):
         raise PermissionDenied
 
     if fits_file.process_status == 'CHECK_CALIBRATION' and request.method == "POST" and \
-                    request.user == fits_file.uploaded_by:
+            (request.user == fits_file.uploaded_by or request.user.is_staff):
         # The results of the users choice whether the action was successful or not.
         # The action was successful!
         if request.POST.get('correct') == 'true':
@@ -532,11 +548,11 @@ def process_calibration_retry(request, file_id):
     except (ObjectDoesNotExist, ValueError):
         raise Http404
 
-    if request.user != fits_file.uploaded_by:
+    if (request.user != fits_file.uploaded_by) and (not request.user.is_staff):
         raise PermissionDenied
 
     if fits_file.process_status == 'CHECK_CALIBRATION' and request.method == "POST" and \
-                    request.user == fits_file.uploaded_by:
+            (request.user == fits_file.uploaded_by or request.user.is_staff):
         # User is giving us some parameters to retry the calibration with.
         form = RedoCalibrationForm(request.POST)
 

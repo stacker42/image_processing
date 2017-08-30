@@ -85,6 +85,9 @@ class FITSFile(models.Model):
     class Meta:
         db_table = "fits_files"
 
+    def __str__(self):
+        return '[' + str(self.id) + '] ' + self.fits_filename + ' (' + self.original_filename + ')'
+
 
 # class UnprocessedUpload(models.Model):
 #     """
@@ -121,6 +124,9 @@ class Observation(models.Model):
 
     class Meta:
         db_table = "observations"
+
+    def __str__(self):
+        return '[' + str(self.id) + '] for ' + str(self.fits)
 
 
 class Photometry(models.Model):

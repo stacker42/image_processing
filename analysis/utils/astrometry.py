@@ -111,3 +111,4 @@ def do_astrometry(path, file_id):
 
     # # Cleanup files we made earlier
     #shutil.rmtree(WORKING_DIRECTORY)
+    return True
