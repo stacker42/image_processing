@@ -79,7 +79,7 @@ class ImagingDeviceForm(forms.ModelForm):
         model = ImagingDevice
         fields = ('name', 'scale', 'mirror_diameter', 'description')
         labels = {'name': 'Name of your device', 'scale': 'Pixel scale (arcseconds)',
-                  'mirror_diameter': 'Mirror diameter (m)'}
+                  'mirror_diameter': 'Main Mirror / Objective Lens diameter (m)'}
         widgets = {'description': forms.Textarea}
 
 

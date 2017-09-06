@@ -946,7 +946,7 @@ def accounts_profile(request):
     # Get all the files that have been processed by a user, but only if they have been completed successfully or failed
     processed_files = FITSFile.objects.filter(uploaded_by=request.user)\
         .filter(Q(process_status='COMPLETE') | Q(process_status='FAILED') | Q(process_status='FAILED_USER'))\
-        .order_by('-upload_time')
+        .order_by(order_by)
 
     paginator = Paginator(processed_files, 100)
 

@@ -4,6 +4,7 @@
 
 {% block content %}
 
+
     <h1>Add or modify an imaging device</h1>
 
     {% if form.errors %}
@@ -27,7 +28,10 @@
 
     <form action="." method="POST" enctype="multipart/form-data">
         {% csrf_token %}
-        {{ form.as_p }}
+        <p>{{ form.name.label }} {{ form.name }}</p>
+        <p>{{ form.scale.label }} {{ form.scale }}</p>
+        <p>{{ form.mirror_diameter.label }} {{ form.mirror_diameter }}</p>
+        <p>{{ form.descripton.label }}<br />{{ form.description }}</p>
         <input type="submit" value="Submit" class="btn btn-success">
     </form>
 
