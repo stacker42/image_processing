@@ -152,3 +152,26 @@ class Photometry(models.Model):
     class Meta:
         db_table = "photometry"
 
+class TemporaryPhotometry(models.Model):
+    """
+    This is a temporary storage space, until we are SURE the photometry has been done correctly
+    Stores the photometry information for a specific object
+    flags NOTE: Uses SExtractor flags, but extra added after 128.
+    256 - Too bright to use
+    512 - Too faint
+    1024 - Something else caused a problem
+    """
+    observation = models.ForeignKey(Observation)
+    calibrated_magnitude = models.FloatField()
+    calibrated_error = models.FloatField()
+    magnitude_rms_error = models.FloatField()
+    x = models.FloatField()
+    y = models.FloatField()
+    alpha_j2000 = models.FloatField()
+    delta_j2000 = models.FloatField()
+    fwhm_world = models.FloatField()
+    flags = models.CharField(max_length=10)
+    magnitude = models.FloatField()
+
+    class Meta:
+        db_table = "photometry_temp"

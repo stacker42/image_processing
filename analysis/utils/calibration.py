@@ -9,7 +9,7 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 from scipy.signal import medfilt
 from scipy import optimize
-from analysis.models import FITSFile, Observation, Photometry
+from analysis.models import FITSFile, Observation, Photometry, TemporaryPhotometry
 import os
 import pyfits
 
@@ -356,6 +356,7 @@ def do_calibration(file_id, max_use, min_use):
         mag_m_good = mag_m[check[0]]
         cal_mag_good = cal_mag[check[0]]
         diff_mag = mag_m[check[0]] - cal_mag[check[0]]
+        diff_mag_2 = mag_m[check_plot[0]] - cal_mag[check_plot[0]]
 
         # Scatter plot of calibrated magnitudes between min and max mag
         axis2.scatter(cal_mag[check[0]], mag_m[check[0]] - cal_mag[check[0]], s=5, c="red",
@@ -418,21 +419,28 @@ def do_calibration(file_id, max_use, min_use):
         # Iterate over all our stars to calculate the median and rms for them
         for i in check_flag_error[0]:
             # Get all stars within 1 magnitude of the star we are looking at
-            check_within_1mag = numpy.where((mag_m_good[:] > mag_array[i] - 0.5) & (mag_m_good[:] < mag_array[i] + 0.5) & (mag_m_good[:] != mag_array[i]))
-            ###
-            # TODO: is this okay?
-            ###
+            check_within_1mag = numpy.where((cal_mag[check[0]] > mag_array[i] - 0.75) & (cal_mag[check[0]] < mag_array[i] + 0.75))
+
             if len(check_within_1mag[0]) > 0:
                 # median = numpy.median(diff_mag[check_within_1mag[0]])
+
                 rms = numpy.nanstd(diff_mag[check_within_1mag[0]])
+
+                check_within_1mag_2 = numpy.where((numpy.abs(diff_mag[check_within_1mag[0]]) < 4.0 * rms))
+
+                rms = numpy.nanstd(diff_mag[check_within_1mag[0][check_within_1mag_2[0]]])
+
+                #print diff_mag[check_within_1mag[0][check_within_1mag_2[0]]]
+
+                #print rms, mag_array[i]
+
                 uncertainty_stars[i] = rms
 
-        axis2.scatter(mag_array, uncertainty_stars, s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1,
-                      label='Uncertainty')
+        axis2.scatter(mag_array, uncertainty_stars, s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1, label='Uncertainty')
+
+        axis2.scatter(mag_array, -uncertainty_stars, s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1)
 
         axis2.legend(loc='center', bbox_to_anchor=(0.5, -0.25), ncol=5, fontsize='x-small')
-
-        print numpy.average(uncertainty_stars)
 
         # We've moved the image generation down here as we want to add the rms points to the graph too.
         fig.tight_layout()
@@ -516,7 +524,7 @@ def do_calibration(file_id, max_use, min_use):
         # example on how to use the bulk_create function so we don't thrash the DB
 
         phot_objects = [
-            Photometry(
+            TemporaryPhotometry(
                 calibrated_magnitude=fitfunc_cal(param_cal, mag_2[i]),
                 calibrated_error=uncertainty_stars[i],
                 magnitude_rms_error=mage_2[i],
@@ -532,7 +540,7 @@ def do_calibration(file_id, max_use, min_use):
             for i in range(0, len(num_2))
         ]
 
-        Photometry.objects.bulk_create(phot_objects)
+        TemporaryPhotometry.objects.bulk_create(phot_objects)
 
         for i in range(0, len(num_2)):
             photcalfile.write("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f %6.4f\n" %

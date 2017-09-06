@@ -497,6 +497,10 @@ def process_calibration(request, file_id):
         # The results of the users choice whether the action was successful or not.
         # The action was successful!
         if request.POST.get('correct') == 'true':
+            observation = Observation.objects.get(fits=fits_file)
+            temp_photometry_objects = TemporaryPhotometry.objects.filter(observation=observation)
+            Photometry.objects.bulk_create(temp_photometry_objects)
+            temp_photometry_objects.delete()
             fits_file.process_status = 'COMPLETE'
             fits_file.save()
             return redirect('process')
@@ -563,7 +567,7 @@ def process_calibration_retry(request, file_id):
                 shutil.rmtree(os.path.join(settings.PLOTS_DIRECTORY, str(fits_file.id)))
 
             observation = Observation.objects.get(fits=fits_file)
-            Photometry.objects.filter(observation=observation).delete()
+            TemporaryPhotometry.objects.filter(observation=observation).delete()
 
             # Re-do calibration with values that the user has entered
             success, reason = calibration.do_calibration(file_id, max_use=form.cleaned_data['max_use'],
@@ -598,6 +602,7 @@ def process_reprocess(request, file_id):
         if request.POST.get('reprocess') == 'true':
             try:
                 observation = Observation.objects.get(fits=fits_file)
+                TemporaryPhotometry.objects.filter(observation=observation).delete()
                 Photometry.objects.filter(observation=observation).delete()
                 observation.delete()
             except ObjectDoesNotExist:
@@ -892,6 +897,7 @@ def delete_file(request, file_id):
 
         try:
             observation = Observation.objects.get(fits=fits_file)
+            TemporaryPhotometry.objects.filter(observation=observation).delete()
             Photometry.objects.filter(observation=observation).delete()
             observation.delete()
         except ObjectDoesNotExist:
