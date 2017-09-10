@@ -1,6 +1,8 @@
 # coding=utf-8
 from django import forms
 from models import Object, Observation, ImagingDevice
+from registration.forms import RegistrationForm
+from captcha.fields import CaptchaField
 
 
 class UploadFileForm(forms.Form):
@@ -89,3 +91,10 @@ class RedoCalibrationForm(forms.Form):
     """
     max_use = forms.FloatField(initial=0)
     min_use = forms.FloatField(initial=0)
+
+
+class CAPTCHARegistrationForm(RegistrationForm):
+    """
+    Custom registration form including a CAPTCHA
+    """
+    captcha = CaptchaField()
