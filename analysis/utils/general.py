@@ -9,6 +9,7 @@ from astropy.time import Time
 from django.core.exceptions import PermissionDenied
 import pyfits
 import upload
+from django.db import connection
 
 
 def make_response(status=200, content_type='text/plain', content=None):
@@ -120,3 +121,8 @@ def delete_folders(fits_file):
 
     if os.path.exists(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id))):
         shutil.rmtree(os.path.join(settings.ASTROMETRY_WORKING_DIRECTORY, str(fits_file.id)))
+
+
+def copy_to_photometry(observation_id):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT observation_id, calibrated_magnitude, calibrated_error, magnitude_rms_error, x, y, alpha_j2000, delta_j2000, fwhm_world, flags, magnitude INTO photometry FROM photometry_temp WHERE observation_id = %s", observation_id)

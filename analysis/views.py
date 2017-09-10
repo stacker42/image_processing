@@ -499,7 +499,10 @@ def process_calibration(request, file_id):
         if request.POST.get('correct') == 'true':
             observation = Observation.objects.get(fits=fits_file)
             temp_photometry_objects = TemporaryPhotometry.objects.filter(observation=observation)
-            Photometry.objects.bulk_create(temp_photometry_objects)
+
+            # Using a raw SQL query here
+            general.copy_to_photometry(observation.id)
+
             temp_photometry_objects.delete()
             fits_file.process_status = 'COMPLETE'
             fits_file.save()
