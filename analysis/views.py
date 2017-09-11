@@ -499,20 +499,19 @@ def process_calibration(request, file_id):
         if request.POST.get('correct') == 'true':
             observation = Observation.objects.get(fits=fits_file)
 
-            # https://stackoverflow.com/questions/10697575/howto-copy-object-from-model-a-to-model-b
+            # This is not ideal - but we REALLY don't want to copy over the primary key to the new table,
+            # as it WILL conflict with previous entries.
 
-            temp_photometry_objects = TemporaryPhotometry.objects.filter(observation=observation).defer('id').values()
-            phot_objects = list()
+            temp_photometry_objects = TemporaryPhotometry.objects.filter(observation=observation).values()
+            phots = []
 
             for p in temp_photometry_objects:
-                phot_objects.append(Photometry(**p))
+                del p['id']
+                phots.append(Photometry(**p))
 
-            # Using a raw SQL query here
-            #general.copy_to_photometry(observation.id)
+            Photometry.objects.bulk_create(phots)
 
-            Photometry.objects.bulk_create(phot_objects)
-
-            temp_photometry_objects.delete()
+            TemporaryPhotometry.objects.filter(observation=observation).delete()
             fits_file.process_status = 'COMPLETE'
             fits_file.save()
             return redirect('process')
@@ -597,6 +596,8 @@ def process_calibration_retry(request, file_id):
         return redirect('process_calibration', file_id=file_id)
 
 
+@csrf_exempt
+@login_required
 def process_reprocess(request, file_id):
     """
     Allow a user to re-process a file from the beginning (the header check)
