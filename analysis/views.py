@@ -498,12 +498,19 @@ def process_calibration(request, file_id):
         # The action was successful!
         if request.POST.get('correct') == 'true':
             observation = Observation.objects.get(fits=fits_file)
-            temp_photometry_objects = TemporaryPhotometry.objects.filter(observation=observation).defer('id')
+
+            # https://stackoverflow.com/questions/10697575/howto-copy-object-from-model-a-to-model-b
+
+            temp_photometry_objects = TemporaryPhotometry.objects.filter(observation=observation).defer('id').values()
+            phot_objects = list()
+
+            for p in temp_photometry_objects:
+                phot_objects.append(Photometry(**p))
 
             # Using a raw SQL query here
             #general.copy_to_photometry(observation.id)
 
-            Photometry.objects.bulk_create(temp_photometry_objects)
+            Photometry.objects.bulk_create(phot_objects)
 
             temp_photometry_objects.delete()
             fits_file.process_status = 'COMPLETE'
