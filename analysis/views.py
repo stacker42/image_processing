@@ -251,7 +251,14 @@ def process_metadata(request, file_id):
                 date = Time(date + "T" + time).jd
 
             # Convert whatever format the date is in the header to Julian and store this
-            observation.date = float(date)
+            try:
+                observation.date = float(date)
+            except ValueError:
+                # The user has probably chosen the wrong datatype here...
+                return render(request, "base_error.html", {'message': "The date that you have chosen couldn't be "
+                                                                      "converted properly. Are you sure that you chose "
+                                                                      "the right date type (JD, MJD, Date & Time etc.) "
+                                                                      "for the data in the file?"})
 
             observation.exptime = inhdulist[0].header[device.exptime_card]
 
@@ -372,7 +379,14 @@ def process_metadata_modify(request, file_id):
                 date = form.cleaned_data['date']
                 date = Time(date + "T" + time).jd
 
-            observation.date = float(date)
+            try:
+                observation.date = float(date)
+            except ValueError:
+                # The user has probably chosen the wrong datatype here...
+                form.add_error('date_format', "The date that you have chosen couldn't be converted properly. Are you "
+                                              "sure that you chose the right date type for the data?")
+
+                return render(request, "base_process_metadata_modify.html", {'form': form})
 
             observation.exptime = form.cleaned_data['exptime']
 
@@ -611,35 +625,30 @@ def process_reprocess(request, file_id):
         raise PermissionDenied
 
     if request.method == "POST":
-        # Make sure the user definately wants to reprocess file. Hasn't accidentally done this.
-        if request.POST.get('reprocess') == 'true':
-            try:
-                observation = Observation.objects.get(fits=fits_file)
-                TemporaryPhotometry.objects.filter(observation=observation).delete()
-                Photometry.objects.filter(observation=observation).delete()
-                observation.delete()
-            except ObjectDoesNotExist:
-                pass  # We don't care if they don't exist, we're deleting them anyway
+        try:
+            observation = Observation.objects.get(fits=fits_file)
+            TemporaryPhotometry.objects.filter(observation=observation).delete()
+            Photometry.objects.filter(observation=observation).delete()
+            observation.delete()
+        except ObjectDoesNotExist:
+            pass  # We don't care if they don't exist, we're deleting them anyway
 
-            if not os.path.exists(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid))):
-                os.mkdir(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid)))
+        if not os.path.exists(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid))):
+            os.mkdir(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid)))
 
-            # Move the FITS file back to an original temporary directory
-            shutil.move(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
+        # Move the FITS file back to an original temporary directory
+        shutil.move(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
                         os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.original_filename))
 
-            fits_file.fits_filename = fits_file.original_filename
+        fits_file.fits_filename = fits_file.original_filename
 
-            general.delete_folders(fits_file)
+        general.delete_folders(fits_file)
 
-            fits_file.process_status = 'UPLOADED'
+        fits_file.process_status = 'UPLOADED'
 
-            fits_file.save()
+        fits_file.save()
 
-            return redirect('process')
-
-        else:
-            raise PermissionDenied
+        return redirect('process')
     else:
         raise PermissionDenied
 

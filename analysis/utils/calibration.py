@@ -1,4 +1,5 @@
 import matplotlib
+from matplotlib import figure
 matplotlib.use('Agg')
 
 import numpy
@@ -299,7 +300,7 @@ def do_calibration(file_id, max_use, min_use):
         print rmscal, med_offset
 
 
-        fig = plt.figure()
+        fig = figure.Figure()
 
         axis1 = fig.add_subplot(211)
 
@@ -451,6 +452,7 @@ def do_calibration(file_id, max_use, min_use):
                                  + '.png'), format='png', bbox_inches='tight', dpi=600)
         # Purge figure from memory
         fig.clf()
+        plt.close()
 
 
         # determine the limiting magnitude of each image
