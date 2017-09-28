@@ -293,14 +293,14 @@ def process_metadata(request, file_id):
 
     try:
         # Use date card from the device
-        dateval = hdulist[0].header[device.date_card]
+        dateval = str(hdulist[0].header[device.date_card])
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
         valid = False
         dateval = ''
     try:
         # Use exposure time card from device
-        exptimeval = hdulist[0].header[device.exptime_card]
+        exptimeval = str(hdulist[0].header[device.exptime_card])
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
         valid = False
@@ -308,7 +308,7 @@ def process_metadata(request, file_id):
 
     try:
         # Use filter card from device
-        filterval = hdulist[0].header[device.filter_card]
+        filterval = str(hdulist[0].header[device.filter_card])
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
         valid = False
