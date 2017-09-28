@@ -29,7 +29,7 @@
         <p>The filter that you have chosen is not currently supported for your selected target.</p>
     {% endif %}
 
-    <a href="{% url 'process-metadata-modify' file_id %}?date={{ date }}&filter={{ filter }}&exptime={{ exptime }}" class="btn btn-primary">This is incorrect, modify values</a>
+    <a href="{% url 'process-metadata-modify' file_id %}?date={{ date }}&filter={{ filter }}&exptime={{ exptime }}&date_format={{ device.date_format }}" class="btn btn-primary">This is incorrect, modify values</a>
     <br /><br />
     <form method="POST" action="{% url 'process-metadata' file_id %}" enctype="multipart/form-data">
         {% csrf_token %}
