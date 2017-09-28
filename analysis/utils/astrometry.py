@@ -86,11 +86,15 @@ def do_astrometry(path, file_id):
     inhdulist[0].header['CRVAL1'] = (rac, 'RA  of reference point')
     inhdulist[0].header['CRVAL2'] = (decc, 'DEC of reference point')
 
-    fits.writeto(os.path.join(WORKING_DIRECTORY, 'in.fits'), inhdulist[0].data, inhdulist[0].header)
+    try:
+        fits.writeto(os.path.join(WORKING_DIRECTORY, 'in.fits'), inhdulist[0].data, inhdulist[0].header)
+    except IOError:
+        # This means that the astrometry crashed in the past, but the file exists here. We'll just continue as normal
+        pass
 
     # Actually solve the image using the astrometry.net solve-field command
     # We downsample and guess field to try and speed things up a bit. Don't go lower than 2 - causes problems
-    solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '2']
+    solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '2', '--overwrite']
 
     subprocess.check_output(solve_command)
 
