@@ -35,7 +35,7 @@
     <form action="{% url 'process_calibration_retry' file.id %}" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
-        <input type="submit" value="Retry calibration with above values" class="btn btn-default">
+        <input type="submit" value="Retry calibration with above values" class="btn btn-primary">
     </form>
 
     <br />
