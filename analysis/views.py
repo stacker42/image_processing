@@ -425,7 +425,7 @@ def process_metadata_modify(request, file_id):
         # The values that we might have grabbed from the header will be in the GET variables. If there's nothing there,
         # then the initial data will just be blank, which is intentional
         initial_values = {'exptime': request.GET.get('exptime'), 'date': request.GET.get('date'),
-                          'filter': request.GET.get('filter')}
+                          'filter': request.GET.get('filter'), 'date_format': request.GET.get('date_format')}
 
         form = MetadataForm(initial=initial_values)
 
