@@ -558,7 +558,7 @@ def do_calibration(file_id, max_use, min_use):
         print med_offset, starsused, maglim, time
 
         if numpy.average(uncertainty_stars) > 0.02:
-            return 'warning', "Are you sure you chose the right filter? Uncertainty greater than 0.02 mag."
+            return 'warning', "Are you sure you chose the right filter? Uncertainty greater than 0.2 mag."
 
         return True, "Success"
     else:
