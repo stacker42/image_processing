@@ -527,16 +527,16 @@ def do_calibration(file_id, max_use, min_use):
 
         phot_objects = [
             TemporaryPhotometry(
-                calibrated_magnitude=fitfunc_cal(param_cal, mag_2[i]),
-                calibrated_error=uncertainty_stars[i],
-                magnitude_rms_error=mage_2[i],
-                x=x_2[i],
-                y=y_2[i],
-                alpha_j2000=ra_2[i],
-                delta_j2000=de_2[i],
-                fwhm_world=fwhm_2[i],
-                flags=flag_2[i],
-                magnitude=mag_2[i],
+                calibrated_magnitude=fitfunc_cal(param_cal, mag_2[i]) if not numpy.isnan(fitfunc_cal(param_cal, mag_2[i])) else None,
+                calibrated_error=uncertainty_stars[i] if not numpy.isnan(uncertainty_stars[i]) else None,
+                magnitude_rms_error=mage_2[i] if not numpy.isnan(mage_2[i]) else None,
+                x=x_2[i] if not numpy.isnan(x_2[i]) else None,
+                y=y_2[i] if not numpy.isnan(y_2[i]) else None,
+                alpha_j2000=ra_2[i] if not numpy.isnan(ra_2[i]) else None,
+                delta_j2000=de_2[i] if not numpy.isnan(de_2[i]) else None,
+                fwhm_world=fwhm_2[i] if not numpy.isnan(fwhm_2[i]) else None,
+                flags=flag_2[i] if not numpy.isnan(flag_2[i]) else None,
+                magnitude=mag_2[i] if not numpy.isnan(mag_2[i]) else None,
                 observation=observation,
             )
             for i in range(0, len(num_2))
