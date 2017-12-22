@@ -148,6 +148,7 @@ class Photometry(models.Model):
     fwhm_world = models.FloatField()
     flags = models.CharField(max_length=10)
     magnitude = models.FloatField()
+    stellar_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
         db_table = "photometry"
