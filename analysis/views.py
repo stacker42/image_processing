@@ -114,7 +114,7 @@ def process_observation(request, file_id):
                 fits_file.save()
                 return redirect('process_devicesetup', file_id=file_id)
         else:
-            return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
+            return render(request, "base_process_observation.html", {'form': form, 'file': fits_file})
     else:
         form = ObservationForm()
         if not request.user.is_staff:
@@ -122,7 +122,7 @@ def process_observation(request, file_id):
         else:
             form.fields['device'].queryset = ImagingDevice.objects.all()
 
-        return render(request, "base_process_observation.html", {'form': form, 'file_id': file_id})
+        return render(request, "base_process_observation.html", {'form': form, 'file' : fits_file})
 
 
 @login_required
@@ -192,7 +192,7 @@ def process_devicesetup(request, file_id):
     form.fields['filter'].choices = choices
     form.fields['exposure_time'].choices = choices
 
-    return render(request, "base_process_devicesetup.html", {'form': form})
+    return render(request, "base_process_devicesetup.html", {'form': form, 'device': device})
 
 
 @login_required
@@ -342,7 +342,8 @@ def process_metadata(request, file_id):
                                                         'date': dateval, 'exptime': exptimeval, 'filter': filterval,
                                                         'valid': valid, 'time': timeval, 'used_filter': used_filter,
                                                         'all_filters': settings.ALL_FILTERS,
-                                                        'target_supported_filter': target_supported_filter})
+                                                        'target_supported_filter': target_supported_filter,
+                                                        'file': fits_file})
 
 
 def process_metadata_modify(request, file_id):
@@ -386,7 +387,7 @@ def process_metadata_modify(request, file_id):
                 form.add_error('date_format', "The date that you have chosen couldn't be converted properly. Are you "
                                               "sure that you chose the right date type for the data?")
 
-                return render(request, "base_process_metadata_modify.html", {'form': form})
+                return render(request, "base_process_metadata_modify.html", {'form': form, 'file': fits_file})
 
             observation.exptime = form.cleaned_data['exptime']
 
@@ -394,7 +395,7 @@ def process_metadata_modify(request, file_id):
 
             if used_filter is None:
                 form.add_error('filter', "You must choose a valid filter")
-                return render(request, "base_process_metadata_modify.html", {'form': form})
+                return render(request, "base_process_metadata_modify.html", {'form': form, 'file': fits_file})
 
             found = []
             for f in os.listdir(os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(observation.target.number))):
@@ -405,7 +406,7 @@ def process_metadata_modify(request, file_id):
 
             if True not in found:
                 form.add_error('filter', "You must choose a filter supported by your target")
-                return render(request, "base_process_metadata_modify.html", {'form': form})
+                return render(request, "base_process_metadata_modify.html", {'form': form, 'file': fits_file})
 
             observation.filter = used_filter
             observation.orignal_filter = form.cleaned_data['filter']
@@ -420,7 +421,7 @@ def process_metadata_modify(request, file_id):
             observation.save()
             return redirect('process')
         else:
-            return render(request, "base_process_metadata_modify.html", {'form': form})
+            return render(request, "base_process_metadata_modify.html", {'form': form, 'file': fits_file})
     else:
         # The values that we might have grabbed from the header will be in the GET variables. If there's nothing there,
         # then the initial data will just be blank, which is intentional
@@ -429,7 +430,7 @@ def process_metadata_modify(request, file_id):
 
         form = MetadataForm(initial=initial_values)
 
-        return render(request, "base_process_metadata_modify.html", {'form': form})
+        return render(request, "base_process_metadata_modify.html", {'form': form, 'file': fits_file})
 
 
 @login_required

@@ -6,7 +6,7 @@
 
     <h1>Duplicate file detected</h1>
 
-    <p>The file that you are trying to process has already been uploaded to this site before. Are you sure that you
+    <p>The file that you are trying to process ({{ fits_file.fits_filename }}) has already been uploaded to this site before. Are you sure that you
         haven't previously uploaded this file? You can check the files you have previously uploaded <a href="{% url 'accounts_profile' %}">here</a>.</p>
 
     <form method="POST" action="{% url 'process-metadata' fits_file.id %}" enctype="multipart/form-data">
