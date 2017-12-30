@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     analysis.migrations
+    analysis.templatetags
     analysis.utils
 
 Submodules

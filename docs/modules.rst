@@ -7,3 +7,4 @@ image_processing
    analysis
    image_processing
    manage
+   query
