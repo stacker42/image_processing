@@ -17,7 +17,6 @@ from django.db.models import Q
 from forms import *
 from models import *
 from utils import fits, upload, astrometry, photometry, calibration, general
-import pyfits
 from astropy.time import Time
 
 
@@ -45,10 +44,19 @@ def process(request):
                                                                          ~Q(process_status='FAILED_USER')
                                                                          ).order_by('upload_time')
     else:
-        files_list = FITSFile.objects.filter(~Q(process_status='COMPLETE') &
+
+        user_id_filter = request.GET.get('user')
+
+        if user_id_filter is None:
+            files_list = FITSFile.objects.filter(~Q(process_status='COMPLETE') &
                                         ~Q(process_status='FAILED') &
                                         ~Q(process_status='FAILED_USER')
                                         ).order_by('upload_time')
+        else:
+            files_list = FITSFile.objects.filter(~Q(process_status='COMPLETE') &
+                                        ~Q(process_status='FAILED') &
+                                        ~Q(process_status='FAILED_USER') &
+                                        Q(uploaded_by_id=user_id_filter)).order_by('upload_time')
 
     paginator = Paginator(files_list, 100)
 
@@ -62,7 +70,9 @@ def process(request):
         # If page is out of range (e.g. 9999), deliver last page of results.
         files = paginator.page(paginator.num_pages)
 
-    return render(request, "base_process.html", {'files': files})
+    choose_user_form = ChooseUserForm()
+
+    return render(request, "base_process.html", {'files': files, 'choose_user_form': choose_user_form})
 
 
 @login_required
@@ -784,16 +794,12 @@ def modify_object(request, id):
 
                 # make sure we only try and write catalog files that the user uploaded
                 if cat_file is not None:
-                    print 'yooooooo'
                     path = os.path.join(settings.MASTER_CATALOGUE_DIRECTORY, str(form.cleaned_data['number']),
                                         catalog_file + '.cat')
                     # Write the catalog file to disk under the new name
                     with open(path, 'w') as f:
                         f.write(cat_file.read())
                         f.close()
-
-                    print catalog_file
-                    print cat_file.name
 
                     # Add information about this file to the database
                     setattr(object, catalog_file + '_original', cat_file.name)
@@ -847,6 +853,9 @@ def manage_files(request):
     """
 
     sortby = request.GET.get('sortby')
+    # Users can filter the results they get by either the user uploaded, the status, or both
+    user_id_filter = request.GET.get('user')
+    status_filter = request.GET.get('status')
 
     if sortby == 'name':
         order_by = 'fits_filename'
@@ -871,7 +880,14 @@ def manage_files(request):
     else:
         order_by = '-upload_time'
 
-    files_list = FITSFile.objects.all().order_by(order_by)
+    if user_id_filter is None and status_filter is None:
+        files_list = FITSFile.objects.all().order_by(order_by)
+    elif user_id_filter is not None and status_filter is None:
+        files_list = FITSFile.objects.filter(uploaded_by_id=user_id_filter).order_by(order_by)
+    elif user_id_filter is None and status_filter is not None:
+        files_list = FITSFile.objects.filter(process_status=status_filter).order_by(order_by)
+    else:
+        files_list = FITSFile.objects.filter(process_status=status_filter, uploaded_by_id=user_id_filter).order_by(order_by)
 
     paginator = Paginator(files_list, 100)
 
@@ -885,7 +901,11 @@ def manage_files(request):
         # If page is out of range (e.g. 9999), deliver last page of results.
         files = paginator.page(paginator.num_pages)
 
-    return render(request, "base_manage_files.html", {'files': files})
+    choose_status_form = ChooseStatusForm()
+    choose_user_form = ChooseUserForm()
+
+    return render(request, "base_manage_files.html", {'files': files, 'choose_status_form': choose_status_form,
+                                                      'choose_user_form': choose_user_form})
 
 
 @login_required

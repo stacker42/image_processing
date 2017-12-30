@@ -1,8 +1,9 @@
 # coding=utf-8
 from django import forms
-from models import Object, Observation, ImagingDevice
+from models import Object, Observation, ImagingDevice, FITSFile
 from registration.forms import RegistrationForm
 from captcha.fields import CaptchaField
+from django.contrib.auth.models import User
 
 
 class UploadFileForm(forms.Form):
@@ -98,3 +99,17 @@ class CAPTCHARegistrationForm(RegistrationForm):
     Custom registration form including a CAPTCHA
     """
     captcha = CaptchaField()
+
+
+class ChooseUserForm(forms.Form):
+    """
+    Form to choose a user from a dropdown list
+    """
+    user = forms.ModelChoiceField(queryset=User.objects.all().order_by('username'))
+
+
+class ChooseStatusForm(forms.Form):
+    """
+    Form to choose a status from a dropdown list
+    """
+    status = forms.ChoiceField(choices=FITSFile.STATUS_CHOICES)

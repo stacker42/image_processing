@@ -7,10 +7,10 @@
     {% load time %}
     {% load query_transform %}
 
-    <h1>All files and their current status</h1>
+    <h1>All files and their current status</h1>xw
 
     <table class="table table-striped">
-        <tr><th>Name <a href="{% query_transform request sortby='name' %}">&uarr;</a> <a href="{% query_transform request sortby='name_rev' %}">&darr;</a></th><th>Uploaded By <a href="{% query_transform request sortby='uploaded_by' %}">&uarr;</a> <a href="{% query_transform request sortby='uploaded_by_rev' %}">&darr;</a></th><th>Current Status <a href="{% query_transform request sortby='current_status' %}">&uarr;</a> <a href="{% query_transform request sortby='current_status_rev' %}">&darr;</a></th><th>Uploaded Time <a href="{% query_transform request sortby='time' %}">&uarr;</a> <a href="{% query_transform request sortby='time_rev' %}">&darr;</a></th><th>Action</th></tr>
+        <tr><th>Name <a href="{% query_transform request sortby='name' %}">&uarr;</a> <a href="{% query_transform request sortby='name_rev' %}">&darr;</a></th><th>Uploaded By <a href="{% query_transform request sortby='uploaded_by' %}">&uarr;</a> <a href="{% query_transform request sortby='uploaded_by_rev' %}">&darr;</a> <form action="" method="GET" class="filterform">{{ choose_user_form.as_p }} <input type="submit" value="&rarr;"></form></th><th>Current Status <a href="{% query_transform request sortby='current_status' %}">&uarr;</a> <a href="{% query_transform request sortby='current_status_rev' %}">&darr;</a> <form action="" method="GET" class="filterform">{{ choose_status_form.as_p }} <input type="submit" value="&rarr;"></th><th>Uploaded Time <a href="{% query_transform request sortby='time' %}">&uarr;</a> <a href="{% query_transform request sortby='time_rev' %}">&darr;</a></th><th>Action</th></tr>
         {% for file in files %}
             <tr><td>{{ file.fits_filename }}</td><td>{{ file.uploaded_by.username }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time|timestamp_to_human }}</td><td><a href="javascript:reprocessConfirm('{% url 'process_reprocess' file.id %}','{{ file.fits_filename }}');" class="btn btn-danger">Reprocess</a><a href="javascript:delConfirm('{% url 'delete_file' file.id %}','{{ file.fits_filename }}');" class="btn btn-danger">Delete</a></td></tr>
         {% endfor %}
@@ -61,6 +61,45 @@
             location.reload();
         }
     }
+
+    /**
+     * From https://www.raymondcamden.com/2013/12/11/Quick-Sample-Appending-URL-data-to-a-Form-post-with-JavaScript/
+     * Allows us to add elements to the query string rather than overwriting it when submitting a form
+     */
+
+    function getQueryString() {
+        var result = {};
+        if(!window.location.search.length) return result;
+        var qs = window.location.search.slice(1);
+        var parts = qs.split("&");
+        for(var i=0, len=parts.length; i<len; i++) {
+            var tokens = parts[i].split("=");
+            result[tokens[0]] = decodeURIComponent(tokens[1]);
+        }
+        return result;
+    }
+
+    $(document).ready(function() {
+        $(".filterform").submit(function(e) {
+            var qs = getQueryString();
+            for(var key in qs) {
+                var field = $(document.createElement("input"));
+                field.attr("name", key).attr("type","hidden");
+                field.val(qs[key]);
+
+                // Check that the key doesn't already exist in the form before adding it. Otherwise we'll get duplicates!
+                // Therefore the form data should always have precedence over existing elements in the query string.
+                if(!$("select[name=" + key + "]").val()) {
+                    $(this).append(field);
+                }
+            }
+        });
+    });
+
+    /**
+     * End code excerpt
+     */
+
 
     </script>
 
