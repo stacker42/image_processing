@@ -113,3 +113,11 @@ class ChooseStatusForm(forms.Form):
     Form to choose a status from a dropdown list
     """
     status = forms.ChoiceField(choices=FITSFile.STATUS_CHOICES)
+
+
+class RADecForm(forms.Form):
+    """
+    Form to enter an Right Ascension and Declination
+    """
+    ra = forms.DecimalField(decimal_places=5, label="RA")
+    dec = forms.DecimalField(decimal_places=5, label="Dec")

@@ -1,6 +1,4 @@
-#import fits
 import os
-import pyfits
 import shutil
 from django.conf import settings
 import subprocess

@@ -1,4 +1,4 @@
-import pyfits
+from astropy.io import fits
 
 
 def get_hdu_list(path):
@@ -7,7 +7,7 @@ def get_hdu_list(path):
     :param path: The path to the FITS file
     :return: list of FITS header and data units
     """
-    hdu_list = pyfits.open(path)
+    hdu_list = fits.open(path)
     return hdu_list
 
 

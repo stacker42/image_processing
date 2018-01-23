@@ -12,7 +12,7 @@ from scipy.signal import medfilt
 from scipy import optimize
 from analysis.models import FITSFile, Observation, Photometry, TemporaryPhotometry
 import os
-import pyfits
+from astropy.io import fits
 
 SKIP_ROWS_IN_CAT = 9  # number of rows to skip in photometry tables
 POS_OFFSET = 3  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
@@ -120,7 +120,7 @@ def do_calibration(file_id, max_use, min_use):
 
     # read in FITS header of corresponding image and get observing date
     # which is stored in header 'TIMETIME' by the 'change_header.py' program
-    data, header = pyfits.getdata(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
+    data, header = fits.getdata(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
                                   header=True)
     time = header['DATE-OBS']
 
@@ -202,6 +202,8 @@ def do_calibration(file_id, max_use, min_use):
     # If no min use is specified then generate one
     if min_use == 0:
         check = numpy.where((flag_2[:] == 0) & (mag_2[:] > -50))
+        if len(mag_2[check[0]]) < 1:
+            return False, "Not enough stars to do calibration. Please contact us for support."
         min_use = numpy.min(mag_2[check[0]])
 
     # make coordcatalogue for the catalogue

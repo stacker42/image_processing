@@ -3,11 +3,10 @@ from django.conf import settings
 from analysis.models import *
 from analysis.forms import *
 import os
-import fits
 import shutil
 from astropy.time import Time
 from django.core.exceptions import PermissionDenied
-import pyfits
+from astropy.io import fits
 import upload
 from django.db import connection
 
@@ -39,18 +38,12 @@ def process_metadata_db(inhdulist, fits_file, request):
     # Iterate through all the header values and add these to a dictionary
     for key, value in zip(inhdulist[0].header.keys(), inhdulist[0].header.values()):
         # Don't add header cards that we can't read the value of
-        if not isinstance(value, pyfits.card.Undefined):
+        if not isinstance(value, fits.card.Undefined):
             header[key] = value
 
     fits_file.header = header
 
     observation = Observation.objects.get(fits=fits_file)
-
-    print observation.target.name
-
-    print observation.orignal_filter
-
-    print observation.date
 
     filename = str(fits_file.id) + '_' + str(request.user.id) + '_' + str(observation.device.id) + '_' + \
                observation.target.name + '_' + observation.orignal_filter + '_' + str(observation.date) + '.fits'

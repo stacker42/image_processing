@@ -16,8 +16,9 @@ from django.views.generic import View
 from django.db.models import Q
 from forms import *
 from models import *
-from utils import fits, upload, astrometry, photometry, calibration, general
+from utils import fits, upload, astrometry, photometry, calibration, general, lc
 from astropy.time import Time
+from django.db import connection, transaction
 
 
 @login_required
@@ -91,8 +92,6 @@ def process_observation(request, file_id):
 
     if (fits_file.uploaded_by != request.user) and (not request.user.is_staff):
         raise PermissionDenied
-
-    print fits_file.process_status
 
     # Let the user sort out their header cards for the device they are using if they go here
     # (We don't want a seperate header cards button when this will be a rare thing)
@@ -1057,3 +1056,86 @@ class UploadView(View):
                                                     'success': False,
                                                     'error': '%s' % repr(form.errors)
                                                 }))
+
+
+def lightcurve(request):
+    """
+    Let the user enter the RA and Dec for this lightcurve
+    :param request:
+    :return:
+    """
+
+    ra = request.GET.get('ra')
+    dec = request.GET.get('dec')
+    star = request.GET.get('star')
+    user_filters = request.GET.getlist('filter')
+
+    if ra is not None and dec is not None and star is None and not user_filters:
+        # User needs to choose a star based on ra and dec
+        stars = Photometry.objects.raw(
+            "SELECT id, stellar_id FROM photometry WHERE ((alpha_j2000 between %s-3/3600 and %s+3/3600)  and (delta_j2000 between %s-3/3600 and %s+3/3600)) AND cal_offset(alpha_j2000,%s, delta_j2000,%s) < 3 AND stellar_id IS NOT NULL GROUP BY stellar_id;",
+            [ra, ra, dec, dec, ra, dec])
+
+        return render(request, "base_lightcurve_stars.html", {'ra': ra, 'dec': dec, 'stars': stars})
+
+    elif star is not None:
+        # User has chosen a star, now we will produce a plot with all the default filters
+
+        cursor = connection.cursor()
+        cursor.execute("SELECT observations.filter FROM photometry, observations WHERE photometry.stellar_id = %s AND photometry.observation_id = observations.id GROUP BY observations.filter;", [star])
+
+        filters = cursor.fetchall()
+
+        return render(request, "base_lightcurve_plot.html", {'star': star, 'filters': filters, 'ra': ra, 'dec': dec})
+
+    else:
+        form = RADecForm()
+
+        return render(request, "base_lightcurve.html", {'form': form})
+
+
+def lightcurve_plot(request):
+    """
+    Output as an image the actual lightcurve plot, based on parameters passed to the query string
+    :param request:
+    :return:
+    """
+    user_star = request.GET.get('star')
+    user_filters = request.GET.getlist('filter')
+
+    #x = magnitudes
+    #y = time
+
+    colours = {'R': 'red', 'V': 'green', 'B': 'blue', 'U': 'purple', 'I': 'black', 'SZ': 'yellow', 'CV': 'm'}
+    shapes = {'R': 's', 'V': 'v', 'B': 'p', 'U': '8', 'I': '*', 'SZ': 'x', 'CV': '^'}
+
+    magnitudes = []
+    dates = []
+
+    for f in user_filters:
+        print f
+        data_m = {}
+        data_d = {}
+        data_m['filter'] = f
+        stars = Photometry.objects.filter(~Q(magnitude_rms_error=-99), stellar_id=user_star, observation__filter=f)
+        magnitudes_star = []
+        dates_star = []
+        for star in stars:
+            magnitudes_star.append(star.calibrated_magnitude)
+            dates_star.append(star.observation.date)
+        data_m['magnitudes'] = magnitudes_star
+        data_d['dates'] = dates_star
+
+        magnitudes.append(data_m)
+        dates.append(data_d)
+
+
+    # then use different shapes for different filters
+    # if original filter is H-Alpha then make colour purple (or something)
+
+    # Add an offset for each filter - let the user change these.
+
+    image = lc.image_plot(dates, magnitudes, "Magnitudes", "Time", 0, colours, shapes)
+    # scatter plot
+
+    return HttpResponse(image.read(), content_type="image/png")

@@ -66,8 +66,8 @@ CHECKIMAGE_NAME  check.fits     # Filename for the check-image
  
 #--------------------- Memory (change with caution!) -------------------------
  
-MEMORY_OBJSTACK  3000           # number of objects in stack
-MEMORY_PIXSTACK  300000         # number of pixels in stack
+MEMORY_OBJSTACK  30000           # number of objects in stack
+MEMORY_PIXSTACK  3000000         # number of pixels in stack
 MEMORY_BUFSIZE   1024           # number of lines in buffer
  
 #----------------------------- Miscellaneous ---------------------------------
@@ -75,4 +75,4 @@ MEMORY_BUFSIZE   1024           # number of lines in buffer
 VERBOSE_TYPE     QUIET         # can be QUIET, NORMAL or FULL
 WRITE_XML        N              # Write XML file (Y/N)?
 XML_NAME         sex.xml        # Filename for XML output
-NTHREADS          1              # Number of simultaneous threads for
+NTHREADS          10              # Number of simultaneous threads for

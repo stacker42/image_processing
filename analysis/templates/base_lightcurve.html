@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Plot a lightcurve{% endblock %}
+
+{% block content %}
+
+    <h1>Lightcurve Plot</h1>
+
+    <form action="{% url 'lightcurve' %}" method="GET">
+
+    {{ form.as_p }}
+
+    <input type="submit" value="Get stars for these co-ordinates">
+
+    </form>
+
+{% endblock %}

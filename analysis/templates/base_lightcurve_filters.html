@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Plot a lightcurve{% endblock %}
+
+{% block content %}
+
+    <h1>Lightcurve Plot - Choose a filter</h1>
+
+    <p>Please choose one or more of the following filters to plot for the star ({{ star }} [RA {{ ra }}, Dec {{ dec }}]) that you have chosen.</p>
+
+    <form action="{% url 'lightcurve' %}" method="get">
+
+        {% for filter in filters %}
+            <input type="checkbox" name="filters" value="{{ filter.0 }}"><label>{{ filter.0 }}</label>
+        {% endfor %}
+
+        <input type="hidden" value="{{ ra }}" name="ra">
+        <input type="hidden" value="{{ dec }}" name="dec">
+        <input type="hidden" value="{{ star }}" name="star">
+
+        <input type="submit" value="Submit">
+    </form>
+
+{% endblock %}

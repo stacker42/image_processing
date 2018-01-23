@@ -7,7 +7,7 @@
     {% load time %}
     {% load query_transform %}
 
-    <h1>All files and their current status</h1>xw
+    <h1>All files and their current status</h1>
 
     <table class="table table-striped">
         <tr><th>Name <a href="{% query_transform request sortby='name' %}">&uarr;</a> <a href="{% query_transform request sortby='name_rev' %}">&darr;</a></th><th>Uploaded By <a href="{% query_transform request sortby='uploaded_by' %}">&uarr;</a> <a href="{% query_transform request sortby='uploaded_by_rev' %}">&darr;</a> <form action="" method="GET" class="filterform">{{ choose_user_form.as_p }} <input type="submit" value="&rarr;"></form></th><th>Current Status <a href="{% query_transform request sortby='current_status' %}">&uarr;</a> <a href="{% query_transform request sortby='current_status_rev' %}">&darr;</a> <form action="" method="GET" class="filterform">{{ choose_status_form.as_p }} <input type="submit" value="&rarr;"></th><th>Uploaded Time <a href="{% query_transform request sortby='time' %}">&uarr;</a> <a href="{% query_transform request sortby='time_rev' %}">&darr;</a></th><th>Action</th></tr>
