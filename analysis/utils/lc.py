@@ -20,7 +20,7 @@ def image_plot(x, y, x_label, y_label, limits, colours, shapes):
     i = 0
     while i < len(x):
         axes.append(fig.add_subplot(211))
-        axes[i].scatter(x[i]['dates'], y[i]['magnitudes'])
+        axes[i].scatter(x[i]['dates'], y[i]['magnitudes'], marker=shapes[y[i]['filter']], c=colours[y[i]['filter']])
         i += 1
 
     fig.tight_layout()

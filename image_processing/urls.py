@@ -23,7 +23,8 @@ from django.contrib.auth.views import password_reset_confirm, password_reset_com
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^$', views.home, name="home"),
+    url(r'^$', views.lightcurve, name="home"),
+    url(r'^ul/$', views.upload, name="ul"),
     url(r'^process/$', views.process, name="process"),
     url(r'^process/metadata/(?P<file_id>[0-9]+)/$', views.process_metadata, name="process-metadata"),
     url(r'^process/devicesetup/(?P<file_id>[0-9]+)/$', views.process_devicesetup, name="process_devicesetup"),

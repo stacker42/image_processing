@@ -138,20 +138,21 @@ class Photometry(models.Model):
     1024 - Something else caused a problem
     """
     observation = models.ForeignKey(Observation)
-    calibrated_magnitude = models.FloatField()
+    calibrated_magnitude = models.DecimalField(decimal_places=4, max_digits=10)
     calibrated_error = models.FloatField()
     magnitude_rms_error = models.FloatField()
     x = models.FloatField()
     y = models.FloatField()
-    alpha_j2000 = models.FloatField()
-    delta_j2000 = models.FloatField()
+    alpha_j2000 = models.DecimalField(decimal_places=6, max_digits=12)
+    delta_j2000 = models.DecimalField(decimal_places=6, max_digits=12)
     fwhm_world = models.FloatField()
     flags = models.CharField(max_length=10)
-    magnitude = models.FloatField()
+    magnitude = models.DecimalField(decimal_places=4, max_digits=10)
     stellar_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
         db_table = "photometry"
+
 
 class TemporaryPhotometry(models.Model):
     """
@@ -163,16 +164,16 @@ class TemporaryPhotometry(models.Model):
     1024 - Something else caused a problem
     """
     observation = models.ForeignKey(Observation)
-    calibrated_magnitude = models.FloatField()
+    calibrated_magnitude = models.DecimalField(decimal_places=4, max_digits=10)
     calibrated_error = models.FloatField()
     magnitude_rms_error = models.FloatField()
     x = models.FloatField()
     y = models.FloatField()
-    alpha_j2000 = models.FloatField()
-    delta_j2000 = models.FloatField()
+    alpha_j2000 = models.DecimalField(decimal_places=6, max_digits=12)
+    delta_j2000 = models.DecimalField(decimal_places=6, max_digits=12)
     fwhm_world = models.FloatField()
     flags = models.CharField(max_length=10)
-    magnitude = models.FloatField()
+    magnitude = models.DecimalField(decimal_places=4, max_digits=10)
 
     class Meta:
         db_table = "photometry_temp"

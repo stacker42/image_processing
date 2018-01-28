@@ -19,10 +19,11 @@ from models import *
 from utils import fits, upload, astrometry, photometry, calibration, general, lc
 from astropy.time import Time
 from django.db import connection, transaction
+import json
 
 
 @login_required
-def home(request):
+def upload(request):
     """
     Let the user upload files
     :param request:
@@ -1102,9 +1103,7 @@ def lightcurve_plot(request):
     """
     user_star = request.GET.get('star')
     user_filters = request.GET.getlist('filter')
-
-    #x = magnitudes
-    #y = time
+    offsets = request.GET.getlist('offset')
 
     colours = {'R': 'red', 'V': 'green', 'B': 'blue', 'U': 'purple', 'I': 'black', 'SZ': 'yellow', 'CV': 'm'}
     shapes = {'R': 's', 'V': 'v', 'B': 'p', 'U': '8', 'I': '*', 'SZ': 'x', 'CV': '^'}
@@ -1113,7 +1112,11 @@ def lightcurve_plot(request):
     dates = []
 
     for f in user_filters:
-        print f
+        offset = 0
+        # Change our offset string I:3 into filter I and offset 3
+        for o in offsets:
+            if o[:1] == f:
+                offset = o[2:]
         data_m = {}
         data_d = {}
         data_m['filter'] = f
@@ -1121,7 +1124,7 @@ def lightcurve_plot(request):
         magnitudes_star = []
         dates_star = []
         for star in stars:
-            magnitudes_star.append(star.calibrated_magnitude)
+            magnitudes_star.append(star.calibrated_magnitude + float(offset))
             dates_star.append(star.observation.date)
         data_m['magnitudes'] = magnitudes_star
         data_d['dates'] = dates_star
@@ -1129,13 +1132,6 @@ def lightcurve_plot(request):
         magnitudes.append(data_m)
         dates.append(data_d)
 
-
-    # then use different shapes for different filters
-    # if original filter is H-Alpha then make colour purple (or something)
-
-    # Add an offset for each filter - let the user change these.
-
     image = lc.image_plot(dates, magnitudes, "Magnitudes", "Time", 0, colours, shapes)
-    # scatter plot
 
     return HttpResponse(image.read(), content_type="image/png")

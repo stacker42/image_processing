@@ -7,7 +7,7 @@
     <h1>Lightcurve Plot</h1>
 
 
-    <img src="{% url 'lightcurve_plot' %}?star={{ star }}{% for filter in filters %}&filter={{ filter.0 }}{% endfor %}">
+    <img id="plot" src="{% url 'lightcurve_plot' %}?star={{ star }}{% for filter in filters %}&filter={{ filter.0 }}{% endfor %}" width="800px">
 
 
     <p>Please choose one or more of the following filters to plot for the star ({{ star }} [RA {{ ra }}, Dec {{ dec }}]) that you have chosen.</p>
@@ -21,6 +21,32 @@
 
     <script type="application/javascript">
 
+        $("#update-filter").click(function () {
+            checked_filters = [];
+            offsets = [];
+            $("[name='filter']").each(function() {
+                if($(this).is(":checked")) {
+                    checked_filters.push($(this).val());
+                }
+            });
+
+            $("[name*='offset-']").each(function() {
+                if($(this).val()) {
+                    offsets.push({'name': $(this).attr('name'), 'value': $(this).val()});
+                }
+            });
+
+            var url = "{% url 'lightcurve_plot' %}?star={{ star }}";
+            for(var i = 0; i < checked_filters.length; i++) {
+                url = url + "&filter=" + checked_filters[i];
+            }
+
+            for(var j = 0; j < offsets.length; j++) {
+                url = url + "&offset=" + offsets[j]['name'].replace('offset-', '') + ":" + offsets[j]['value'];
+            }
+            console.log(encodeURI(url));
+            $("#plot").attr('src', encodeURI(url));
+        });
 
     </script>
 
