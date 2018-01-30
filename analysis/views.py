@@ -23,7 +23,7 @@ import json
 
 
 @login_required
-def upload(request):
+def ul(request):
     """
     Let the user upload files
     :param request:
