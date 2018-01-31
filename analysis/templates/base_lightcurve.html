@@ -4,13 +4,13 @@
 
 {% block content %}
 
-    <h1>Lightcurve Plot</h1>
+    <h1>Lightcurve Plot - Experimental Feature</h1>
 
     <form action="{% url 'lightcurve' %}" method="GET">
 
     {{ form.as_p }}
 
-    <input type="submit" value="Get stars for these co-ordinates">
+    <input type="submit" value="Get stars for these co-ordinates" class="btn btn-default">
 
     </form>
 

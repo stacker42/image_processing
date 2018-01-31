@@ -4,7 +4,7 @@
 
 {% block content %}
 
-    <h1>Lightcurve Plot</h1>
+    <h1>Lightcurve Plot - Experimental Feature</h1>
 
 
     <img id="plot" src="{% url 'lightcurve_plot' %}?star={{ star }}{% for filter in filters %}&filter={{ filter.0 }}{% endfor %}" width="800px">
@@ -16,7 +16,7 @@
         <input type="checkbox" name="filter" value="{{ filter.0 }}"> <label>{{ filter.0 }}</label> <input type="number" name="offset-{{ filter.0 }}"> <label for="offset-{{ filter.0 }}">Offset</label><br />
     {% endfor %}
 
-    <button type="button" id="update-filter">Update Filter Selection</button>
+    <button type="button" id="update-filter" class="btn btn-default">Update Filter Selection</button>
 
 
     <script type="application/javascript">

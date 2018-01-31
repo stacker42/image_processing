@@ -13,6 +13,7 @@ from scipy import optimize
 from analysis.models import FITSFile, Observation, Photometry, TemporaryPhotometry
 import os
 from astropy.io import fits
+from decimal import *
 
 SKIP_ROWS_IN_CAT = 9  # number of rows to skip in photometry tables
 POS_OFFSET = 3  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
@@ -529,16 +530,16 @@ def do_calibration(file_id, max_use, min_use):
 
         phot_objects = [
             TemporaryPhotometry(
-                calibrated_magnitude=fitfunc_cal(param_cal, mag_2[i]) if not numpy.isnan(fitfunc_cal(param_cal, mag_2[i])) else None,
+                calibrated_magnitude=Decimal.from_float(fitfunc_cal(param_cal, mag_2[i])) if not numpy.isnan(fitfunc_cal(param_cal, mag_2[i])) else None,
                 calibrated_error=uncertainty_stars[i] if not numpy.isnan(uncertainty_stars[i]) else None,
                 magnitude_rms_error=mage_2[i] if not numpy.isnan(mage_2[i]) else None,
                 x=x_2[i] if not numpy.isnan(x_2[i]) else None,
                 y=y_2[i] if not numpy.isnan(y_2[i]) else None,
-                alpha_j2000=ra_2[i] if not numpy.isnan(ra_2[i]) else None,
-                delta_j2000=de_2[i] if not numpy.isnan(de_2[i]) else None,
+                alpha_j2000=Decimal.from_float(ra_2[i]) if not numpy.isnan(ra_2[i]) else None,
+                delta_j2000=Decimal.from_float(de_2[i]) if not numpy.isnan(de_2[i]) else None,
                 fwhm_world=fwhm_2[i] if not numpy.isnan(fwhm_2[i]) else None,
                 flags=flag_2[i] if not numpy.isnan(flag_2[i]) else None,
-                magnitude=mag_2[i] if not numpy.isnan(mag_2[i]) else None,
+                magnitude=Decimal.from_float(mag_2[i]) if not numpy.isnan(mag_2[i]) else None,
                 observation=observation,
             )
             for i in range(0, len(num_2))

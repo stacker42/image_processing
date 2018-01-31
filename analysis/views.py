@@ -20,6 +20,7 @@ from utils import fits, upload, astrometry, photometry, calibration, general, lc
 from astropy.time import Time
 from django.db import connection, transaction
 import json
+from decimal import *
 
 
 @login_required
@@ -1124,7 +1125,7 @@ def lightcurve_plot(request):
         magnitudes_star = []
         dates_star = []
         for star in stars:
-            magnitudes_star.append(star.calibrated_magnitude + float(offset))
+            magnitudes_star.append(star.calibrated_magnitude + Decimal(offset))
             dates_star.append(star.observation.date)
         data_m['magnitudes'] = magnitudes_star
         data_d['dates'] = dates_star
