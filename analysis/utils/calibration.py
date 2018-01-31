@@ -528,18 +528,24 @@ def do_calibration(file_id, max_use, min_use):
         # With thanks to https://stackoverflow.com/questions/18383471/django-bulk-create-function-example for the
         # example on how to use the bulk_create function so we don't thrash the DB
 
+        ra_2_decimal = ra_2.astype(Decimal)
+        de_2_decimal = de_2.astype(Decimal)
+        x_2_decimal = x_2.astype(Decimal)
+        y_2_decimal = y_2.astype(Decimal)
+        mag_2_decimal = mag_2.astype(Decimal)
+
         phot_objects = [
             TemporaryPhotometry(
                 calibrated_magnitude=Decimal.from_float(fitfunc_cal(param_cal, mag_2[i])) if not numpy.isnan(fitfunc_cal(param_cal, mag_2[i])) else None,
                 calibrated_error=uncertainty_stars[i] if not numpy.isnan(uncertainty_stars[i]) else None,
                 magnitude_rms_error=mage_2[i] if not numpy.isnan(mage_2[i]) else None,
-                x=x_2[i] if not numpy.isnan(x_2[i]) else None,
-                y=y_2[i] if not numpy.isnan(y_2[i]) else None,
-                alpha_j2000=Decimal.from_float(ra_2[i]) if not numpy.isnan(ra_2[i]) else None,
-                delta_j2000=Decimal.from_float(de_2[i]) if not numpy.isnan(de_2[i]) else None,
+                x=x_2_decimal[i] if not numpy.isnan(x_2[i]) else None,
+                y=y_2_decimal[i] if not numpy.isnan(y_2[i]) else None,
+                alpha_j2000=ra_2_decimal[i] if not numpy.isnan(ra_2[i]) else None,
+                delta_j2000=de_2_decimal[i] if not numpy.isnan(de_2[i]) else None,
                 fwhm_world=fwhm_2[i] if not numpy.isnan(fwhm_2[i]) else None,
                 flags=flag_2[i] if not numpy.isnan(flag_2[i]) else None,
-                magnitude=Decimal.from_float(mag_2[i]) if not numpy.isnan(mag_2[i]) else None,
+                magnitude=mag_2_decimal[i] if not numpy.isnan(mag_2[i]) else None,
                 observation=observation,
             )
             for i in range(0, len(num_2))
