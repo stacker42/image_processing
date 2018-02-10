@@ -20,7 +20,6 @@ def image_plot(x, y, x_label, y_label, limits, colours, shapes):
     axes = fig.add_subplot(211)
     while i < len(x):
         axes.scatter(x[i]['dates'], y[i]['magnitudes'], marker=shapes[y[i]['filter']], c=colours[y[i]['filter']])
-        axes.invert_yaxis()
         i += 1
 
     if limits[0] is not None:
@@ -34,6 +33,8 @@ def image_plot(x, y, x_label, y_label, limits, colours, shapes):
 
     axes.set_ylabel(ylabel=y_label)
     axes.set_xlabel(xlabel=x_label)
+
+    axes.invert_yaxis()
 
     fig.tight_layout()
     fig.set_size_inches(7, 8)
