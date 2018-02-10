@@ -9,7 +9,7 @@
     <p>The following stars have been detected based on the co-ordinates that you entered ({{ ra }}, {{ dec }}).</p>
 
     <ul>
-    {% for star in stars%}
+    {% for star in stars %}
         <li><a href="{% url 'lightcurve' %}?star={{ star.stellar_id }}&ra={{ ra }}&dec={{ dec }}">{{ star.stellar_id }}</a></li>
     {% endfor %}
     </ul>

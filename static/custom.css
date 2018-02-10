@@ -1,0 +1,11 @@
+body {
+    background-color: #eeeeee;
+}
+
+.placeholder {
+    width: 800px;
+    height: 460px;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url('loading.png');
+}

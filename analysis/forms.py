@@ -119,5 +119,5 @@ class RADecForm(forms.Form):
     """
     Form to enter an Right Ascension and Declination
     """
-    ra = forms.DecimalField(decimal_places=5, label="RA")
-    dec = forms.DecimalField(decimal_places=5, label="Dec")
+    ra = forms.CharField(label="RA")
+    dec = forms.CharField(label="Dec")

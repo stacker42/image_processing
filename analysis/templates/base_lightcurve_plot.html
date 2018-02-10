@@ -4,24 +4,82 @@
 
 {% block content %}
 
+    {% load staticfiles %}
+
+    <div class="modal" tabindex="-1" role="dialog" id="genmodal">
+    <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <p>Generating Lightcurve...</p>
+      </div>
+    </div>
+    </div>
+    </div>
+
     <h1>Lightcurve Plot - Experimental Feature</h1>
 
-
-    <img id="plot" src="{% url 'lightcurve_plot' %}?star={{ star }}{% for filter in filters %}&filter={{ filter.0 }}{% endfor %}" width="800px">
-
+    <div class="placeholder">
+        <img id="plot" src="{% static 'loading.png' %}" width="800px">
+    </div>
 
     <p>Please choose one or more of the following filters to plot for the star ({{ star }} [RA {{ ra }}, Dec {{ dec }}]) that you have chosen.</p>
 
     {% for filter in filters %}
-        <input type="checkbox" name="filter" value="{{ filter.0 }}"> <label>{{ filter.0 }}</label> <input type="number" name="offset-{{ filter.0 }}"> <label for="offset-{{ filter.0 }}">Offset</label><br />
+        <input type="checkbox" name="filter" value="{{ filter.0 }}"> <label>{{ filter.0 }}</label> <input name="offset-{{ filter.0 }}"> <label for="offset-{{ filter.0 }}">Offset</label><br />
     {% endfor %}
 
-    <button type="button" id="update-filter" class="btn btn-default">Update Filter Selection</button>
+    <label for="xlim-low">x-axis limit (low)</label><input id="xlim-low" name="xlim-low"><br />
+    <label for="xlim-high">x-axis limit (high)</label><input id="xlim-high" name="xlim-high"><br />
+    <label for="ylim-low">y-axis limit (low)</label><input id="ylim-low" name="ylim-low"><br />
+    <label for="ylim-high">y-axis limit (high)</label><input id="ylim-high" name="ylim-high"><br />
 
+    <button type="button" id="update-filter" class="btn btn-default">Update filter, offset and limit selection</button>
 
     <script type="application/javascript">
 
+        /**
+         * Load in our lightcurve based on the URL
+         */
+        $(document).ready(function () {
+            var querystring = location.search.replace("?", "");
+            var params = querystring.split("&");
+            var use_querystring = false;
+            $.each(params, function(i,v) {
+                // If a filter is specified in the query string, then lets use it instead of the default filters.
+                if(v.indexOf('filter') >=0) {
+                    use_querystring = true;
+                }
+            });
+
+            // Use the default filters
+            if(use_querystring === false) {
+                var filters = [{% for filter in filters %}"{{ filter.0 }}",{% endfor %}];
+
+                var url = "?star={{ star }}&ra={{ ra }}&dec={{ dec }}";
+
+                for (var i = 0; i < filters.length; i++) {
+                    url = url + "&filter=" + filters[i];
+                }
+            } else {
+                url = "?" + querystring;
+            }
+
+            $('#genmodal').modal('show');
+            $("#plot").attr('src', encodeURI("{% url 'lightcurve_plot' %}" + url));
+
+            window.history.replaceState('plot', 'Lightcurve Plot', encodeURI('{% url 'lightcurve' %}' + url));
+
+            $("#plot").on('load', function() {
+                $('#genmodal').modal('hide');
+            })
+
+        });
+
+        /**
+         * Load in our lightcurve based on the form input
+         */
         $("#update-filter").click(function () {
+            $('#genmodal').modal('show');
             checked_filters = [];
             offsets = [];
             $("[name='filter']").each(function() {
@@ -36,7 +94,7 @@
                 }
             });
 
-            var url = "{% url 'lightcurve_plot' %}?star={{ star }}";
+            var url = "?star={{ star }}&ra={{ ra }}&dec={{ dec }}";
             for(var i = 0; i < checked_filters.length; i++) {
                 url = url + "&filter=" + checked_filters[i];
             }
@@ -44,8 +102,16 @@
             for(var j = 0; j < offsets.length; j++) {
                 url = url + "&offset=" + offsets[j]['name'].replace('offset-', '') + ":" + offsets[j]['value'];
             }
-            console.log(encodeURI(url));
-            $("#plot").attr('src', encodeURI(url));
+
+            url = url + ($("#xlim-low").val() ? "&xlim-low=" + $("#xlim-low").val() : "") + ($("#xlim-high").val() ? "&xlim-high=" + $("#xlim-high").val() : "") + ($("#ylim-low").val() ? "&ylim-low=" + $("#ylim-low").val() : "") + ($("#ylim-high").val() ? "&ylim-high=" + $("#ylim-high").val() : "");
+
+            $("#plot").attr('src', encodeURI('{% url 'lightcurve_plot' %}' + url));
+
+            window.history.replaceState('plot', 'Lightcurve Plot', encodeURI('{% url 'lightcurve' %}' + url));
+
+            $("#plot").on('load', function() {
+                $('#genmodal').modal('hide');
+            })
         });
 
     </script>

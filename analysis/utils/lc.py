@@ -16,12 +16,24 @@ def image_plot(x, y, x_label, y_label, limits, colours, shapes):
     fig = figure.Figure()
     canvas = FigureCanvasAgg(fig)
 
-    axes = []
     i = 0
+    axes = fig.add_subplot(211)
     while i < len(x):
-        axes.append(fig.add_subplot(211))
-        axes[i].scatter(x[i]['dates'], y[i]['magnitudes'], marker=shapes[y[i]['filter']], c=colours[y[i]['filter']])
+        axes.scatter(x[i]['dates'], y[i]['magnitudes'], marker=shapes[y[i]['filter']], c=colours[y[i]['filter']])
+        axes.invert_yaxis()
         i += 1
+
+    if limits[0] is not None:
+        axes.set_xlim(left=float(limits[0]))
+    if limits[1] is not None:
+        axes.set_xlim(right=float(limits[1]))
+    if limits[2] is not None:
+        axes.set_ylim(bottom=float(limits[2]))
+    if limits[3] is not None:
+        axes.set_ylim(top=float(limits[3]))
+
+    axes.set_ylabel(ylabel=y_label)
+    axes.set_xlabel(xlabel=x_label)
 
     fig.tight_layout()
     fig.set_size_inches(7, 8)

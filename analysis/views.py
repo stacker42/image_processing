@@ -1105,6 +1105,10 @@ def lightcurve_plot(request):
     user_star = request.GET.get('star')
     user_filters = request.GET.getlist('filter')
     offsets = request.GET.getlist('offset')
+    y_limit_low = request.GET.get('ylim-low')
+    x_limit_low = request.GET.get('xlim-low')
+    y_limit_high = request.GET.get('ylim-high')
+    x_limit_high = request.GET.get('xlim-high')
 
     colours = {'R': 'red', 'V': 'green', 'B': 'blue', 'U': 'purple', 'I': 'black', 'SZ': 'yellow', 'CV': 'm'}
     shapes = {'R': 's', 'V': 'v', 'B': 'p', 'U': '8', 'I': '*', 'SZ': 'x', 'CV': '^'}
@@ -1133,6 +1137,8 @@ def lightcurve_plot(request):
         magnitudes.append(data_m)
         dates.append(data_d)
 
-    image = lc.image_plot(dates, magnitudes, "Magnitudes", "Time", 0, colours, shapes)
+    limits = [x_limit_low, x_limit_high, y_limit_low, y_limit_high]
+
+    image = lc.image_plot(dates, magnitudes, "Time (JD)",  "Magnitude", limits, colours, shapes)
 
     return HttpResponse(image.read(), content_type="image/png")
