@@ -30,6 +30,7 @@
       <ul class="nav navbar-nav">
           {% if not user.is_authenticated %}
               <li><a href="{% url 'auth_login' %}">Login</a></li>
+              <li><a href="{% url 'objects' %}">Objects</a></li>
           {% else %}
               <li><a href="{% url 'ul' %}">Upload</a></li>
               <li><a href="{% url 'process' %}">Process Files</a></li>

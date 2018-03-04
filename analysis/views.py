@@ -356,7 +356,7 @@ def process_metadata(request, file_id):
                                                         'target_supported_filter': target_supported_filter,
                                                         'file': fits_file})
 
-
+@login_required
 def process_metadata_modify(request, file_id):
     """
     Modify (or ideally add) the required header cards to the FITS file so we'll be able to analyse it
@@ -1013,7 +1013,6 @@ def accounts_profile(request):
     return render(request, "base_accounts_profile.html", {'devices': devices, 'processed_files': processed_files})
 
 
-@login_required
 def objects(request):
     """
     List of all objects that can be chosen
@@ -1074,17 +1073,16 @@ def lightcurve(request):
 
     if ra is not None and dec is not None and star is None and not user_filters:
         # User needs to choose a star based on ra and dec
-        stars = Photometry.objects.raw(
-            "SELECT id, stellar_id FROM photometry WHERE ((alpha_j2000 between %s-3/3600 and %s+3/3600)  and (delta_j2000 between %s-3/3600 and %s+3/3600)) AND cal_offset(alpha_j2000,%s, delta_j2000,%s) < 3 AND stellar_id IS NOT NULL GROUP BY stellar_id;",
-            [ra, ra, dec, dec, ra, dec])
+        stars = Photometry.objects.raw("SELECT concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000),%s , avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  delta_j2000 between %s-360/3600 and %s+360/3600  group by round(alpha_j2000*1000,0), round(delta_j2000*1000,0),  t2.filter having num > 16 order by offset_arcsec limit 100;",
+            [ra, dec, ra, ra, dec, dec])
 
         return render(request, "base_lightcurve_stars.html", {'ra': ra, 'dec': dec, 'stars': stars})
 
-    elif star is not None:
+    elif star is "true":
         # User has chosen a star, now we will produce a plot with all the default filters
 
         cursor = connection.cursor()
-        cursor.execute("SELECT observations.filter FROM photometry, observations WHERE photometry.stellar_id = %s AND photometry.observation_id = observations.id GROUP BY observations.filter;", [star])
+        cursor.execute("SELECT observations.filter FROM photometry, observations WHERE photometry.alpha_j2000 = %s AND photometry.delta_j2000 = %s AND photometry.observation_id = observations.id GROUP BY observations.filter;", [ra, dec])
 
         filters = cursor.fetchall()
 
@@ -1102,7 +1100,8 @@ def lightcurve_plot(request):
     :param request:
     :return:
     """
-    user_star = request.GET.get('star')
+    user_ra = request.GET.get('ra')
+    user_dec = request.GET.get('dec')
     user_filters = request.GET.getlist('filter')
     offsets = request.GET.getlist('offset')
     y_limit_low = request.GET.get('ylim-low')
@@ -1125,7 +1124,7 @@ def lightcurve_plot(request):
         data_m = {}
         data_d = {}
         data_m['filter'] = f
-        stars = Photometry.objects.filter(~Q(magnitude_rms_error=-99), stellar_id=user_star, observation__filter=f)
+        stars = Photometry.objects.filter(~Q(magnitude_rms_error=-99), alpha_j2000=user_ra, delta_j2000=user_dec, observation__filter=f)
         magnitudes_star = []
         dates_star = []
         for star in stars:

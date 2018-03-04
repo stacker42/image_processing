@@ -8,10 +8,11 @@
 
     <p>The following stars have been detected based on the co-ordinates that you entered ({{ ra }}, {{ dec }}).</p>
 
-    <ul>
+    <table>
+        <tr><th>HOYS-CAPS Name</th><th>Offset from your co-ordinates (arcsec)</th></tr>
     {% for star in stars %}
-        <li><a href="{% url 'lightcurve' %}?star={{ star.stellar_id }}&ra={{ ra }}&dec={{ dec }}">{{ star.stellar_id }}</a></li>
+        <tr><td><a href="{% url 'lightcurve' %}?star=true&ra={{ star.ra }}&dec={{ star.de }}">{{ star.name }}</a></td><td>{{ star.offset_arcsec }}</td></tr>
     {% endfor %}
-    </ul>
+    </table>
 
 {% endblock %}
