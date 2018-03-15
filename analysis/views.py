@@ -1073,7 +1073,7 @@ def lightcurve(request):
 
     if ra is not None and dec is not None and star is None and not user_filters:
         # User needs to choose a star based on ra and dec
-        stars = Photometry.objects.raw("SELECT concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000),%s , avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  delta_j2000 between %s-360/3600 and %s+360/3600  group by round(alpha_j2000*1000,0), round(delta_j2000*1000,0),  t2.filter having num > 16 order by offset_arcsec limit 100;",
+        stars = Photometry.objects.raw("SELECT t1.id, concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000),%s , avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  delta_j2000 between %s-360/3600 and %s+360/3600  group by round(alpha_j2000*1000,0), round(delta_j2000*1000,0),  t2.filter having num > 16 order by offset_arcsec limit 100;",
             [ra, dec, ra, ra, dec, dec])
 
         return render(request, "base_lightcurve_stars.html", {'ra': ra, 'dec': dec, 'stars': stars})
