@@ -143,11 +143,11 @@ class Photometry(models.Model):
     magnitude_rms_error = models.FloatField()
     x = models.FloatField()
     y = models.FloatField()
-    alpha_j2000 = models.DecimalField(decimal_places=6, max_digits=12)
-    delta_j2000 = models.DecimalField(decimal_places=6, max_digits=12)
+    alpha_j2000 = models.DecimalField(decimal_places=6, max_digits=20)
+    delta_j2000 = models.DecimalField(decimal_places=6, max_digits=20)
     fwhm_world = models.FloatField()
     flags = models.CharField(max_length=10)
-    magnitude = models.DecimalField(decimal_places=4, max_digits=10)
+    magnitude = models.DecimalField(decimal_places=4, max_digits=15)
     stellar_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
@@ -169,11 +169,11 @@ class TemporaryPhotometry(models.Model):
     magnitude_rms_error = models.FloatField()
     x = models.FloatField()
     y = models.FloatField()
-    alpha_j2000 = models.DecimalField(decimal_places=6, max_digits=12)
-    delta_j2000 = models.DecimalField(decimal_places=6, max_digits=12)
+    alpha_j2000 = models.DecimalField(decimal_places=6, max_digits=20)
+    delta_j2000 = models.DecimalField(decimal_places=6, max_digits=20)
     fwhm_world = models.FloatField()
     flags = models.CharField(max_length=10)
-    magnitude = models.DecimalField(decimal_places=4, max_digits=10)
+    magnitude = models.DecimalField(decimal_places=4, max_digits=15)
 
     class Meta:
         db_table = "photometry_temp"

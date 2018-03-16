@@ -233,7 +233,7 @@ def do_calibration(file_id, max_use, min_use):
     # take the matches within a given distance (no flags) and determine photometry
     # offset of catalogue to master table
     check = numpy.where((match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET)
-                        & (flag_m == 0) & (match_flag == 0))
+                        & (flag_m == 0) & (match_flag < 10))
 
     # check=numpy.where( (numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET ) & (flag_m <= 8) &
     # (match_flag <= 8))
@@ -245,7 +245,7 @@ def do_calibration(file_id, max_use, min_use):
     # do the fitting
     # but remove outliers +-0.3mag based on the above med_offset
     check = numpy.where((match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET) & (flag_m == 0) &
-                        (match_flag == 0))
+                        (match_flag < 10))
 
     starsused = len(check[0])
 
