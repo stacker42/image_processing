@@ -40,7 +40,7 @@ def fitfunc_cal(p, mag_s):
     return z
 
 
-def errfunc_cal(p, mag_m, mag_s):
+def errfunc_cal(p, mag_m, mag_s, min_uncal_mag_value):
     """
     weight error function by inverse square of magnitudes to ensure no systematic
     off sets at bright mags
@@ -49,7 +49,7 @@ def errfunc_cal(p, mag_m, mag_s):
     :param mag_s:
     :return:
     """
-    err = (mag_m - fitfunc_cal(p, mag_s)) / (mag_s - 8) / (mag_s - 8)
+    err = (mag_m - fitfunc_cal(p, mag_s)) / (mag_s - min_uncal_mag_value) / (mag_s - min_uncal_mag_value)
     # print "p", p
     return err
 
@@ -291,7 +291,7 @@ def do_calibration(file_id, max_use, min_use):
             # maybe in future change the filter size to number of stars within yy mag
             filsize = numpy.rint(numpy.rint(x[i] ** 2 / 100.) * 2 + 1)
             yy[i] = medfilt(y, filsize.astype(int))[i]
-        param_cal, success = optimize.leastsq(errfunc_cal, parameters, args=(y + x, x))
+        param_cal, success = optimize.leastsq(errfunc_cal, parameters, args=(y + x, x, numpy.min(x) - 2))
         print param_cal
 
         # med_offset = numpy.mean(mag_m[check[0]]-match_mag[check[0]])
