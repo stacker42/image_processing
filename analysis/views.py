@@ -1073,16 +1073,22 @@ def lightcurve(request):
 
     if ra is not None and dec is not None and star is None and not user_filters:
         # User needs to choose a star based on ra and dec
-        stars = Photometry.objects.raw("SELECT t1.id, concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000),%s , avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  delta_j2000 between %s-360/3600 and %s+360/3600  group by round(alpha_j2000*1000,0), round(delta_j2000*1000,0),  t2.filter having num > 16 order by offset_arcsec limit 100;",
+        cursor = connection.cursor()
+        cursor.execute("SELECT concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000), %s, avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  delta_j2000 between %s-360/3600 and %s+360/3600  group by round(alpha_j2000*1000,0), round(delta_j2000*1000,0), t2.filter having num > 16 order by offset_arcsec LIMIT 100;",
             [ra, dec, ra, ra, dec, dec])
+
+        stars = cursor.fetchall()
+
+        for star in stars:
+            print star
 
         return render(request, "base_lightcurve_stars.html", {'ra': ra, 'dec': dec, 'stars': stars})
 
-    elif star is "true":
+    elif star == "true":
         # User has chosen a star, now we will produce a plot with all the default filters
 
         cursor = connection.cursor()
-        cursor.execute("SELECT observations.filter FROM photometry, observations WHERE photometry.alpha_j2000 = %s AND photometry.delta_j2000 = %s AND photometry.observation_id = observations.id GROUP BY observations.filter;", [ra, dec])
+        cursor.execute("SELECT observations.filter FROM photometry, observations WHERE alpha_j2000 between %s-360/3600 and  %s+360/3600 and delta_j2000 between %s-360/3600 and %s+360/3600 AND photometry.observation_id = observations.id GROUP BY observations.filter;", [ra, ra, dec, dec])
 
         filters = cursor.fetchall()
 
@@ -1124,7 +1130,7 @@ def lightcurve_plot(request):
         data_m = {}
         data_d = {}
         data_m['filter'] = f
-        stars = Photometry.objects.filter(~Q(magnitude_rms_error=-99), alpha_j2000=user_ra, delta_j2000=user_dec, observation__filter=f)
+        stars = Photometry.objects.filter(~Q(magnitude_rms_error=-99), alpha_j2000__range=(float(user_ra)-360/3600, float(user_ra)-360/3600), delta_j2000__range=(float(user_dec)-360/3600, float(user_dec)-360/3600), observation__filter=f)
         magnitudes_star = []
         dates_star = []
         for star in stars:
