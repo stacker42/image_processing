@@ -525,6 +525,14 @@ def do_calibration(file_id, max_use, min_use):
         if str(med_offset) == 'nan':
             med_offset = 0
 
+        for i in range(0, len(num_2)):
+            photcalfile.write("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f %6.4f\n" %
+                              (i + 1, fitfunc_cal(param_cal, mag_2[i]) if not mag_2[i] == -99 else -99, uncertainty_stars[i], x_2[i], y_2[i], ra_2[i], de_2[i],
+                               fwhm_2[i], flag_2[i], mag_2[i], mage_2[i]))
+
+        # close file after writing
+        photcalfile.close()
+
         # With thanks to https://stackoverflow.com/questions/18383471/django-bulk-create-function-example for the
         # example on how to use the bulk_create function so we don't thrash the DB
 
@@ -536,7 +544,7 @@ def do_calibration(file_id, max_use, min_use):
 
         phot_objects = [
             TemporaryPhotometry(
-                calibrated_magnitude=Decimal.from_float(fitfunc_cal(param_cal, mag_2[i])) if not numpy.isnan(fitfunc_cal(param_cal, mag_2[i])) else None,
+                calibrated_magnitude=(Decimal.from_float(fitfunc_cal(param_cal, mag_2[i])) if not numpy.isnan(fitfunc_cal(param_cal, mag_2[i])) else None) if not mag_2[i] == -99 else -99,
                 calibrated_error=uncertainty_stars[i] if not numpy.isnan(uncertainty_stars[i]) else None,
                 magnitude_rms_error=mage_2[i] if not numpy.isnan(mage_2[i]) else None,
                 x=x_2_decimal[i] if not numpy.isnan(x_2[i]) else None,
@@ -553,20 +561,12 @@ def do_calibration(file_id, max_use, min_use):
 
         TemporaryPhotometry.objects.bulk_create(phot_objects)
 
-        for i in range(0, len(num_2)):
-            photcalfile.write("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f %6.4f\n" %
-                              (i + 1, fitfunc_cal(param_cal, mag_2[i]), uncertainty_stars[i], x_2[i], y_2[i], ra_2[i], de_2[i],
-                               fwhm_2[i], flag_2[i], mag_2[i], mage_2[i]))
-
-        # close file after writing
-        photcalfile.close()
-
         ################################
 
         print "med_offset, starsused, mag_lim, date"
         print med_offset, starsused, maglim, time
 
-        if numpy.average(uncertainty_stars) > 0.02:
+        if numpy.average(uncertainty_stars) > 0.2:
             return 'warning', "Are you sure you chose the right filter? Uncertainty greater than 0.2 mag."
 
         return True, "Success"
