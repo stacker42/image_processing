@@ -179,12 +179,13 @@ ASTROMETRY_URL = '/astrometry/'
 
 PLOTS_URL = '/plots/'
 
+HA_FILTERS = ['A', 'A-BAND', 'H-ALPHA']
 CV_FILTERS = ['N', 'CV', 'SODIUM', 'CLEAR']
 U_FILTERS = ['U', 'SU', 'ULTRAVIOLET', 'SLOAN-U', 'SLOAN U', 'U-BAND', 'U BAND', 'SU-BAND', 'SU BAND']
 B_FILTERS = ['B', 'TB', 'BLUE', 'B-BAND', 'B-BAND', 'TB-BAND', 'TB BAND']
 V_FILTERS = ['V', 'TG', 'SG', 'VISUAL', 'V BAND', 'V-BAND', 'JOHNSON V', 'GREEN', 'SLOAN G', 'SLOAN-G']
-R_FILTERS = ['R', 'SR', 'CR', 'TR', 'A', 'RED', 'R-BAND', 'H-ALPHA', 'A-BAND', 'SLOAN-R', 'SLOAN R', 'CLEAR R',
-             'CLEAR-R', 'SR-BAND', 'TR-BAND', 'SR BAND', 'TR BAND']
+R_FILTERS = ['R', 'SR', 'CR', 'TR', 'RED', 'R-BAND', 'SLOAN-R', 'SLOAN R', 'CLEAR R',
+             'CLEAR-R', 'SR-BAND', 'TR-BAND', 'SR BAND', 'TR BAND'] + HA_FILTERS
 I_FILTERS = ['I', 'SI', 'INFRARED', 'I-BAND', 'I BAND', 'SLOAN I', 'SLOAN-I', 'SI-BAND', 'SI BAND']
 SZ_FILTERS = ['SZ', 'SZ-BAND', 'SZ BAND', 'SLOAN Z', 'SLOAN-Z']
 

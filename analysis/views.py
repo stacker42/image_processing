@@ -43,23 +43,23 @@ def process(request):
 
     if not request.user.is_staff:
         files_list = FITSFile.objects.filter(uploaded_by=request.user).filter(~Q(process_status='COMPLETE') &
-                                                                         ~Q(process_status='FAILED') &
-                                                                         ~Q(process_status='FAILED_USER')
-                                                                         ).order_by('upload_time')
+                                                                              ~Q(process_status='FAILED') &
+                                                                              ~Q(process_status='FAILED_USER')
+                                                                              ).order_by('upload_time')
     else:
 
         user_id_filter = request.GET.get('user')
 
         if user_id_filter is None:
             files_list = FITSFile.objects.filter(~Q(process_status='COMPLETE') &
-                                        ~Q(process_status='FAILED') &
-                                        ~Q(process_status='FAILED_USER')
-                                        ).order_by('upload_time')
+                                                 ~Q(process_status='FAILED') &
+                                                 ~Q(process_status='FAILED_USER')
+                                                 ).order_by('upload_time')
         else:
             files_list = FITSFile.objects.filter(~Q(process_status='COMPLETE') &
-                                        ~Q(process_status='FAILED') &
-                                        ~Q(process_status='FAILED_USER') &
-                                        Q(uploaded_by_id=user_id_filter)).order_by('upload_time')
+                                                 ~Q(process_status='FAILED') &
+                                                 ~Q(process_status='FAILED_USER') &
+                                                 Q(uploaded_by_id=user_id_filter)).order_by('upload_time')
 
     paginator = Paginator(files_list, 100)
 
@@ -133,7 +133,7 @@ def process_observation(request, file_id):
         else:
             form.fields['device'].queryset = ImagingDevice.objects.all()
 
-        return render(request, "base_process_observation.html", {'form': form, 'file' : fits_file})
+        return render(request, "base_process_observation.html", {'form': form, 'file': fits_file})
 
 
 @login_required
@@ -157,7 +157,7 @@ def process_devicesetup(request, file_id):
     # Get the observation corresponding to our FITS file
     observation = get_object_or_404(Observation, fits=fits_file)
 
-    #observations = Observation.objects.filter(device=observation.device)
+    # observations = Observation.objects.filter(device=observation.device)
 
     device = observation.device
 
@@ -178,7 +178,7 @@ def process_devicesetup(request, file_id):
         device.date_format = form.data['date_format']
         # Only actually add a time card if they chose date and time seperated
         if form.data['date_format'] == 'DATETIMESEP':
-                device.time_card = form.data['time']
+            device.time_card = form.data['time']
         device.save()
 
         # Okay now we can make it look like we've finished sorting out the observation
@@ -350,11 +350,12 @@ def process_metadata(request, file_id):
         timeval = 'N/A'
 
     return render(request, "base_process_metadata.html", {'header': header_text, 'file_id': file_id, 'device': device,
-                                                        'date': dateval, 'exptime': exptimeval, 'filter': filterval,
-                                                        'valid': valid, 'time': timeval, 'used_filter': used_filter,
-                                                        'all_filters': settings.ALL_FILTERS,
-                                                        'target_supported_filter': target_supported_filter,
-                                                        'file': fits_file})
+                                                          'date': dateval, 'exptime': exptimeval, 'filter': filterval,
+                                                          'valid': valid, 'time': timeval, 'used_filter': used_filter,
+                                                          'all_filters': settings.ALL_FILTERS,
+                                                          'target_supported_filter': target_supported_filter,
+                                                          'file': fits_file})
+
 
 @login_required
 def process_metadata_modify(request, file_id):
@@ -487,7 +488,7 @@ def process_astrometry(request, file_id):
 
     # Run the astrometry process for the file
     if astrometry.do_astrometry(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
-                             str(fits_file.id)):
+                                str(fits_file.id)):
 
         # Let the user check whether astrometry was successful
         fits_file.process_status = 'CHECK_ASTROMETRY'
@@ -608,7 +609,7 @@ def process_calibration_retry(request, file_id):
 
             # Re-do calibration with values that the user has entered
             success, reason = calibration.do_calibration(file_id, max_use=form.cleaned_data['max_use'],
-                                       min_use=form.cleaned_data['min_use'])
+                                                         min_use=form.cleaned_data['min_use'])
 
             fits_file.process_status = 'CHECK_CALIBRATION'
 
@@ -650,7 +651,7 @@ def process_reprocess(request, file_id):
 
         # Move the FITS file back to an original temporary directory
         shutil.move(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
-                        os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.original_filename))
+                    os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.original_filename))
 
         fits_file.fits_filename = fits_file.original_filename
 
@@ -810,12 +811,14 @@ def modify_object(request, id):
             return redirect('objects')
 
         else:
-            return render(request, "base_modify_object.html", {'form': form, 'object': object, 'catalog_files_and_names': catalog_files_and_names})
+            return render(request, "base_modify_object.html",
+                          {'form': form, 'object': object, 'catalog_files_and_names': catalog_files_and_names})
     else:
         form = ObjectForm(instance=object)
         form.fields['number'].disabled = True  # We disable editing the object number because it will mess up everything
 
-        return render(request, "base_modify_object.html", {'form': form, 'object': object, 'catalog_files_and_names': catalog_files_and_names})
+        return render(request, "base_modify_object.html",
+                      {'form': form, 'object': object, 'catalog_files_and_names': catalog_files_and_names})
 
 
 @login_required
@@ -888,7 +891,8 @@ def manage_files(request):
     elif user_id_filter is None and status_filter is not None:
         files_list = FITSFile.objects.filter(process_status=status_filter).order_by(order_by)
     else:
-        files_list = FITSFile.objects.filter(process_status=status_filter, uploaded_by_id=user_id_filter).order_by(order_by)
+        files_list = FITSFile.objects.filter(process_status=status_filter, uploaded_by_id=user_id_filter).order_by(
+            order_by)
 
     paginator = Paginator(files_list, 100)
 
@@ -994,8 +998,8 @@ def accounts_profile(request):
 
     devices = ImagingDevice.objects.filter(user=request.user)
     # Get all the files that have been processed by a user, but only if they have been completed successfully or failed
-    processed_files = FITSFile.objects.filter(uploaded_by=request.user)\
-        .filter(Q(process_status='COMPLETE') | Q(process_status='FAILED') | Q(process_status='FAILED_USER'))\
+    processed_files = FITSFile.objects.filter(uploaded_by=request.user) \
+        .filter(Q(process_status='COMPLETE') | Q(process_status='FAILED') | Q(process_status='FAILED_USER')) \
         .order_by(order_by)
 
     paginator = Paginator(processed_files, 100)
@@ -1048,15 +1052,15 @@ class UploadView(View):
             else:
                 return upload.make_response(status=400,
                                             content=json.dumps({
-                                                        'success': False,
-                                                        'error': 'Invalid file'
-                                                    }))
+                                                'success': False,
+                                                'error': 'Invalid file'
+                                            }))
         else:
             return upload.make_response(status=400,
                                         content=json.dumps({
-                                                    'success': False,
-                                                    'error': '%s' % repr(form.errors)
-                                                }))
+                                            'success': False,
+                                            'error': '%s' % repr(form.errors)
+                                        }))
 
 
 def lightcurve(request):
@@ -1074,13 +1078,11 @@ def lightcurve(request):
     if ra is not None and dec is not None and star is None and not user_filters:
         # User needs to choose a star based on ra and dec
         cursor = connection.cursor()
-        cursor.execute("SELECT concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000), %s, avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  delta_j2000 between %s-360/3600 and %s+360/3600  group by round(alpha_j2000*1000,0), round(delta_j2000*1000,0), t2.filter having num > 16 order by offset_arcsec LIMIT 100;",
+        cursor.execute(
+            "SELECT concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000), %s, avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  delta_j2000 between %s-360/3600 and %s+360/3600  group by round(alpha_j2000*1000,0), round(delta_j2000*1000,0), t2.filter having num > 16 order by offset_arcsec LIMIT 100;",
             [ra, dec, ra, ra, dec, dec])
 
         stars = cursor.fetchall()
-
-        for star in stars:
-            print star
 
         return render(request, "base_lightcurve_stars.html", {'ra': ra, 'dec': dec, 'stars': stars})
 
@@ -1088,7 +1090,9 @@ def lightcurve(request):
         # User has chosen a star, now we will produce a plot with all the default filters
 
         cursor = connection.cursor()
-        cursor.execute("SELECT observations.filter FROM photometry, observations WHERE alpha_j2000 between %s-360/3600 and  %s+360/3600 and delta_j2000 between %s-360/3600 and %s+360/3600 AND photometry.observation_id = observations.id GROUP BY observations.filter;", [ra, ra, dec, dec])
+        cursor.execute(
+            "SELECT filter FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and cal_offset(%s, alpha_j2000, %s, delta_j2000) <  2  and alpha_j2000 between %s-5/3600 and %s+5/3600 and delta_j2000 between %s-5/3600 and %s+5/3600 GROUP BY filter;",
+            [ra, dec, ra, ra, dec, dec])
 
         filters = cursor.fetchall()
 
@@ -1130,7 +1134,11 @@ def lightcurve_plot(request):
         data_m = {}
         data_d = {}
         data_m['filter'] = f
-        stars = Photometry.objects.filter(~Q(magnitude_rms_error=-99), alpha_j2000__range=(float(user_ra)-360/3600, float(user_ra)-360/3600), delta_j2000__range=(float(user_dec)-360/3600, float(user_dec)-360/3600), observation__filter=f)
+        # cursor = connection.cursor("SELECT * FROM photometry AS t1, observation AS t2  WHERE t1.`observation_id` = t2.id AND cal_offset(ra_source, alpha_j2000, dec_source, delta_j2000) <  2 AND alpha_j2000 BETWEEN ra_source-5/3600 AND ra_source+5/3600 AND delta_j2000 BETWEEN dec_source-5/3600 AND dec_source +5/3600 AND t1.magnitude_rms_error NOT -99 AND t2.filter = %s;", [f])
+        stars = Photometry.objects.raw(
+            "SELECT * FROM photometry AS t1, observations AS t2  WHERE t1.`observation_id` = t2.id AND cal_offset(%s, alpha_j2000, %s, delta_j2000) <  2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (t1.magnitude_rms_error != '-99') AND t2.filter = %s;",
+            [user_ra, user_dec, user_ra, user_ra, user_dec, user_dec, f])
+        # stars = Photometry.objects.filter(~Q(magnitude_rms_error=-99), alpha_j2000__range=(float(user_ra)-360/3600, float(user_ra)-360/3600), delta_j2000__range=(float(user_dec)-360/3600, float(user_dec)-360/3600), observation__filter=f)
         magnitudes_star = []
         dates_star = []
         for star in stars:
@@ -1144,6 +1152,6 @@ def lightcurve_plot(request):
 
     limits = [x_limit_low, x_limit_high, y_limit_low, y_limit_high]
 
-    image = lc.image_plot(dates, magnitudes, "Time (JD)",  "Magnitude", limits, colours, shapes)
+    image = lc.image_plot(dates, magnitudes, "Time (JD)", "Magnitude", limits, colours, shapes)
 
     return HttpResponse(image.read(), content_type="image/png")

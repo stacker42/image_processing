@@ -1,19 +1,18 @@
-import matplotlib
-from matplotlib import figure
-matplotlib.use('Agg')
-
 import numpy
 from django.conf import settings
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord, match_coordinates_sky
 import astropy.units as u
-import matplotlib.pyplot as plt
 from scipy.signal import medfilt
 from scipy import optimize
 from analysis.models import FITSFile, Observation, Photometry, TemporaryPhotometry
 import os
 from astropy.io import fits
 from decimal import *
+import matplotlib
+from matplotlib import figure
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 SKIP_ROWS_IN_CAT = 9  # number of rows to skip in photometry tables
 POS_OFFSET = 3  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
@@ -50,7 +49,6 @@ def errfunc_cal(p, mag_m, mag_s, min_uncal_mag_value):
     :return:
     """
     err = (mag_m - fitfunc_cal(p, mag_s)) / (mag_s - min_uncal_mag_value) / (mag_s - min_uncal_mag_value)
-    # print "p", p
     return err
 
 
@@ -122,7 +120,7 @@ def do_calibration(file_id, max_use, min_use):
     # read in FITS header of corresponding image and get observing date
     # which is stored in header 'TIMETIME' by the 'change_header.py' program
     data, header = fits.getdata(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
-                                  header=True)
+                                header=True)
     time = header['DATE-OBS']
 
     # get pixel numbers to check if star is near the edge
@@ -238,7 +236,6 @@ def do_calibration(file_id, max_use, min_use):
     # check=numpy.where( (numpy.absolute(dra) < POS_OFFSET) & (numpy.absolute(dde) < POS_OFFSET ) & (flag_m <= 8) &
     # (match_flag <= 8))
 
-
     # determine the median photometric offset as start for the fitting
     med_offset = numpy.median(mag_m[check[0]] - match_mag[check[0]])
 
@@ -252,8 +249,6 @@ def do_calibration(file_id, max_use, min_use):
     try:
         min_use = numpy.min(match_mag[check[0]])
 
-        print 'min use', min_use
-
         # commented out until better soloution is found
         # # determine the maximum usable magnitude for the image
         # binsies = numpy.zeros(80, dtype=numpy.float32).reshape(80)
@@ -264,12 +259,7 @@ def do_calibration(file_id, max_use, min_use):
 
         max_use = numpy.max(match_mag[check[0]])
 
-        #print 'hist ##########'
-        #print hist
-        #print '############'
-
     except ValueError:
-        print 'no catalog matches!!'
         return False, "No stars in your photometry catalog matched with the master catalog. Are you sure you chose the" \
                       "right region?"
 
@@ -279,7 +269,6 @@ def do_calibration(file_id, max_use, min_use):
     # parameters=[med_offset,0,1,20]
     numbers_fit = len(check[0])
 
-    print "use ", numbers_fit, " stars for photometry fit"
     # only fit if there are enough stars for fit, i.e. 5
     if numbers_fit > 10:
         # order the mags to median filter the M vs delta_M plot
@@ -289,19 +278,17 @@ def do_calibration(file_id, max_use, min_use):
         yy = y
         for i in range(0, len(y)):
             # maybe in future change the filter size to number of stars within yy mag
-            filsize = numpy.rint(numpy.rint(x[i] ** 2 / 100.) * 2 + 1)
+            if observation.orignal_filter in settings.HA_FILTERS:
+                multiplier = 2
+            else:
+                multiplier = 1
+            filsize = numpy.rint(numpy.rint(x[i] ** 2 / 100.) * 2 + 1) * multiplier
             yy[i] = medfilt(y, filsize.astype(int))[i]
         param_cal, success = optimize.leastsq(errfunc_cal, parameters, args=(y + x, x, numpy.min(x) - 2))
-        print param_cal
 
         # med_offset = numpy.mean(mag_m[check[0]]-match_mag[check[0]])
         # print mag_m[check[0]]-match_mag[check[0]]
         rmscal = numpy.sqrt(numpy.nanmean((mag_m[check[0]] - match_mag[check[0]] - med_offset) ** 2))
-
-        # plot the mags against each other for checking
-        print "RMS, offset"
-        print rmscal, med_offset
-
 
         fig = figure.Figure()
 
@@ -331,12 +318,6 @@ def do_calibration(file_id, max_use, min_use):
 
         ylim_max = numpy.max(mag_m[check[0]] - match_mag[check[0]]) + 0.05
 
-        # if ylim_min < -0.5:
-        #     ylim_min = -0.5 + med_offset
-        #
-        # if ylim_max > 0.5:
-        #     ylim_max = 0.5 + med_offset
-
         axis1.set_ylim((ylim_min, ylim_max))
 
         axis1.legend(loc='center', bbox_to_anchor=(0.5, -0.25), ncol=5, fontsize='x-small')
@@ -354,7 +335,7 @@ def do_calibration(file_id, max_use, min_use):
 
         # Scatter plot of calibrated magnitudes (sensible magnitudes)
         axis2.scatter(cal_mag[check_plot[0]], mag_m[check_plot[0]] - cal_mag[check_plot[0]], s=1, c="black",
-                    edgecolor='black', alpha=0.8, label='Calibrated magnitudes (<30 & >5)', lw=0.2)
+                      edgecolor='black', alpha=0.8, label='Calibrated magnitudes (<30 & >5)', lw=0.2)
 
         # Set up some arrays to use later in the file writing stage, with good data
         mag_m_good = mag_m[check[0]]
@@ -364,8 +345,7 @@ def do_calibration(file_id, max_use, min_use):
 
         # Scatter plot of calibrated magnitudes between min and max mag
         axis2.scatter(cal_mag[check[0]], mag_m[check[0]] - cal_mag[check[0]], s=5, c="red",
-                    edgecolor='black', alpha=0.8, label='Calibrated magnitudes', lw=0.2)
-
+                      edgecolor='black', alpha=0.8, label='Calibrated magnitudes', lw=0.2)
 
         # Zero line of blue dots
         axis2.scatter(cal_mag[check[0]], 0 * cal_mag[check[0]], s=5, c="blue", edgecolor='black', alpha=0.8,
@@ -423,7 +403,8 @@ def do_calibration(file_id, max_use, min_use):
         # Iterate over all our stars to calculate the median and rms for them
         for i in check_flag_error[0]:
             # Get all stars within 1 magnitude of the star we are looking at
-            check_within_1mag = numpy.where((cal_mag[check[0]] > mag_array[i] - 0.75) & (cal_mag[check[0]] < mag_array[i] + 0.75))
+            check_within_1mag = numpy.where(
+                (cal_mag[check[0]] > mag_array[i] - 0.75) & (cal_mag[check[0]] < mag_array[i] + 0.75))
 
             if len(check_within_1mag[0]) > 0:
                 # median = numpy.median(diff_mag[check_within_1mag[0]])
@@ -434,13 +415,10 @@ def do_calibration(file_id, max_use, min_use):
 
                 rms = numpy.nanstd(diff_mag[check_within_1mag[0][check_within_1mag_2[0]]])
 
-                #print diff_mag[check_within_1mag[0][check_within_1mag_2[0]]]
-
-                #print rms, mag_array[i]
-
                 uncertainty_stars[i] = rms
 
-        axis2.scatter(mag_array, uncertainty_stars, s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1, label='Uncertainty')
+        axis2.scatter(mag_array, uncertainty_stars, s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1,
+                      label='Uncertainty')
 
         axis2.scatter(mag_array, -uncertainty_stars, s=5., c="green", marker="o", edgecolor='black', lw=0.2, alpha=1)
 
@@ -456,7 +434,6 @@ def do_calibration(file_id, max_use, min_use):
         # Purge figure from memory
         fig.clf()
         plt.close()
-
 
         # determine the limiting magnitude of each image
         binsies = numpy.zeros(80, dtype=numpy.float32).reshape(80)
@@ -527,7 +504,8 @@ def do_calibration(file_id, max_use, min_use):
 
         for i in range(0, len(num_2)):
             photcalfile.write("%5.0f %8.4f %6.4f %8.3f %8.3f %11.7f %11.7f %11.9f %3.0f %8.4f %6.4f\n" %
-                              (i + 1, fitfunc_cal(param_cal, mag_2[i]) if not mag_2[i] == -99 else -99, uncertainty_stars[i], x_2[i], y_2[i], ra_2[i], de_2[i],
+                              (i + 1, fitfunc_cal(param_cal, mag_2[i]) if not mag_2[i] == -99 else -99,
+                               uncertainty_stars[i], x_2[i], y_2[i], ra_2[i], de_2[i],
                                fwhm_2[i], flag_2[i], mag_2[i], mage_2[i]))
 
         # close file after writing
@@ -544,7 +522,8 @@ def do_calibration(file_id, max_use, min_use):
 
         phot_objects = [
             TemporaryPhotometry(
-                calibrated_magnitude=(Decimal.from_float(fitfunc_cal(param_cal, mag_2[i])) if not numpy.isnan(fitfunc_cal(param_cal, mag_2[i])) else None) if not mag_2[i] == -99 else -99,
+                calibrated_magnitude=(Decimal.from_float(fitfunc_cal(param_cal, mag_2[i])) if not numpy.isnan(
+                    fitfunc_cal(param_cal, mag_2[i])) else None) if not mag_2[i] == -99 else -99,
                 calibrated_error=uncertainty_stars[i] if not numpy.isnan(uncertainty_stars[i]) else None,
                 magnitude_rms_error=mage_2[i] if not numpy.isnan(mage_2[i]) else None,
                 x=x_2_decimal[i] if not numpy.isnan(x_2[i]) else None,
@@ -561,12 +540,7 @@ def do_calibration(file_id, max_use, min_use):
 
         TemporaryPhotometry.objects.bulk_create(phot_objects)
 
-        ################################
-
-        print "med_offset, starsused, mag_lim, date"
-        print med_offset, starsused, maglim, time
-
-        if numpy.average(uncertainty_stars) > 0.2:
+        if numpy.max(uncertainty_stars) > 0.2:
             return 'warning', "Are you sure you chose the right filter? Uncertainty greater than 0.2 mag."
 
         return True, "Success"
