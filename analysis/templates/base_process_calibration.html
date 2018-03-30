@@ -10,7 +10,7 @@
         <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> Get Help
     </button>
 
-    <br />
+    <br/>
 
     {% load staticfiles %}
 
@@ -18,8 +18,8 @@
 
         <img src="{{ PLOTS_URL }}/{{ file.fits_filename }}.png?invalidate-cache={% now 'U' %}" width="800px">
 
-        <br />
-        <br />
+        <br/>
+        <br/>
 
         {% if success == 'warning' %}
             <p>Warning! {{ reason }}</p>
@@ -32,7 +32,7 @@
         </form>
 
     {% endif %}
-    <br />
+    <br/>
 
     {% if success == False %}
         <p>The calibration was not successful. {{ reason }}</p>
@@ -44,7 +44,7 @@
         <input type="submit" value="Retry calibration with above values" class="btn btn-primary">
     </form>
 
-    <br />
+    <br/>
 
     <form action="{% url 'process_reprocess' file.id %}" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
@@ -52,31 +52,34 @@
         <input type="submit" value="Reprocess file" class="btn btn-danger">
     </form>
 
-    <br />
+    <br/>
 
     <form action="{% url 'process_calibration' file.id %}" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="incorrect" value="true">
-        <input type="submit" value="Calibration graphs appear incorrect/do not exist, delete file" class="btn btn-danger">
+        <input type="submit" value="Calibration graphs appear incorrect/do not exist, delete file"
+               class="btn btn-danger">
     </form>
 
-    <div class="modal fade" id="helpmodal" tabindex="-1" role="dialog" aria-labelledby="helpmodal-label" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title pull-left" id="helpmodal-label">Help Video</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-          <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/onucLAcnhvg" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      </div>
-    </div>
-    </div>
+    <div class="modal fade" id="helpmodal" tabindex="-1" role="dialog" aria-labelledby="helpmodal-label"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title pull-left" id="helpmodal-label">Help Video</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/onucLAcnhvg"
+                            frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 {% endblock %}

@@ -13,33 +13,63 @@
         <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> Get Help
     </button>
 
-    <br />
+    <br/>
 
     <h2>Devices</h2>
 
     {% if devices|length > 0 %}
         <table class="table table-striped">
-            <tr><th>Name</th><th>Scale</th><th>Date Card</th><th>Time Card</th><th>Filter Card</th><th>Exposure Time Card</th><th>Date Format</th></tr>
-        {% for device in devices %}
-            <tr><td><a href="{% url 'modify_device' device.id %}">{{ device.name }}</a></td><td>{{ device.scale }}</td><td>{{ device.date_card }}</td><td>{{ device.time_card }}</td><td>{{ device.filter_card }}</td><td>{{ device.exptime_card }}</td><td>{{ device.date_format }}</td></tr>
-        {% endfor %}
+            <tr>
+                <th>Name</th>
+                <th>Scale</th>
+                <th>Date Card</th>
+                <th>Time Card</th>
+                <th>Filter Card</th>
+                <th>Exposure Time Card</th>
+                <th>Date Format</th>
+            </tr>
+            {% for device in devices %}
+                <tr>
+                    <td><a href="{% url 'modify_device' device.id %}">{{ device.name }}</a></td>
+                    <td>{{ device.scale }}</td>
+                    <td>{{ device.date_card }}</td>
+                    <td>{{ device.time_card }}</td>
+                    <td>{{ device.filter_card }}</td>
+                    <td>{{ device.exptime_card }}</td>
+                    <td>{{ device.date_format }}</td>
+                </tr>
+            {% endfor %}
         </table>
         <p><a href="{% url 'add_device' %}">Add another device?</a></p>
-        {% else %}
-            <p>You have no devices. <a href="{% url 'add_device' %}">Add one?</a></p>
-        {% endif %}
+    {% else %}
+        <p>You have no devices. <a href="{% url 'add_device' %}">Add one?</a></p>
+    {% endif %}
 
     <h2>Processed files</h2>
-        {% if processed_files|length > 0 %}
-            <table class="table table-striped">
-                <tr><th>Name <a href="{% query_transform request sortby='name' %}">&uarr;</a> <a href="{% query_transform request sortby='name_rev' %}">&darr;</a></th><th>Original Name <a href="{% query_transform request sortby='origname' %}">&uarr;</a> <a href="{% query_transform request sortby='origname_rev' %}">&darr;</a></th><th>Current Status <a href="{% query_transform request sortby='current_status' %}">&uarr;</a> <a href="{% query_transform request sortby='current_status_rev' %}">&darr;</a></th><th>Uploaded Time <a href="{% query_transform request sortby='time' %}">&uarr;</a> <a href="{% query_transform request sortby='time_rev' %}">&darr;</a></th></tr>
-                {% for file in processed_files %}
-                <tr><td>{{ file.fits_filename }}</td><td>{{ file.original_filename }}</td><td>{{ file.process_status }}</td><td>{{ file.upload_time|timestamp_to_human }}</td></tr>
-                {% endfor %}
-            </table>
-        {% else %}
-            <p>You've not finished processing any files yet. <a href="{% url 'process' %}">Process some?</a></p>
-        {% endif %}
+    {% if processed_files|length > 0 %}
+        <table class="table table-striped">
+            <tr>
+                <th>Name <a href="{% query_transform request sortby='name' %}">&uarr;</a> <a
+                        href="{% query_transform request sortby='name_rev' %}">&darr;</a></th>
+                <th>Original Name <a href="{% query_transform request sortby='origname' %}">&uarr;</a> <a
+                        href="{% query_transform request sortby='origname_rev' %}">&darr;</a></th>
+                <th>Current Status <a href="{% query_transform request sortby='current_status' %}">&uarr;</a> <a
+                        href="{% query_transform request sortby='current_status_rev' %}">&darr;</a></th>
+                <th>Uploaded Time <a href="{% query_transform request sortby='time' %}">&uarr;</a> <a
+                        href="{% query_transform request sortby='time_rev' %}">&darr;</a></th>
+            </tr>
+            {% for file in processed_files %}
+                <tr>
+                    <td>{{ file.fits_filename }}</td>
+                    <td>{{ file.original_filename }}</td>
+                    <td>{{ file.process_status }}</td>
+                    <td>{{ file.upload_time|timestamp_to_human }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>You've not finished processing any files yet. <a href="{% url 'process' %}">Process some?</a></p>
+    {% endif %}
 
 
     <div class="pagination">
@@ -56,25 +86,27 @@
             <a href="{% query_transform request page=processed_files.next_page_number %}">next</a>
         {% endif %}
     </span>
-</div>
+    </div>
 
-    <div class="modal fade" id="helpmodal" tabindex="-1" role="dialog" aria-labelledby="helpmodal-label" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title pull-left" id="helpmodal-label">Help Video</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/ffpAAGrR5Ms" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      </div>
-    </div>
-    </div>
+    <div class="modal fade" id="helpmodal" tabindex="-1" role="dialog" aria-labelledby="helpmodal-label"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title pull-left" id="helpmodal-label">Help Video</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/ffpAAGrR5Ms"
+                            frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 {% endblock %}

@@ -11,7 +11,7 @@
         <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> Get Help
     </button>
 
-    <br />
+    <br/>
 
     {% if form.errors %}
         {% for field in form %}
@@ -39,13 +39,13 @@
         <input type="submit" value="Modify metadata" class="btn btn-success">
     </form>
 
-        <script type="application/javascript">
+    <script type="application/javascript">
         // Hide our seperate time field unless the user explicitly says that there is seperate date and time fields
 
         $('#id_time').hide();
         $('label[for="id_time"]').hide();
 
-        $('#id_date_format').on('change', function() {
+        $('#id_date_format').on('change', function () {
             if (this.value === 'DATETIMESEP') {
                 $('#id_time').show();
                 $('label[for="id_time"]').show();
@@ -57,23 +57,25 @@
 
     </script>
 
-        <div class="modal fade" id="helpmodal" tabindex="-1" role="dialog" aria-labelledby="helpmodal-label" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title pull-left" id="helpmodal-label">Help Video</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-          <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/nPVeMgC1_5w" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      </div>
-    </div>
-    </div>
+    <div class="modal fade" id="helpmodal" tabindex="-1" role="dialog" aria-labelledby="helpmodal-label"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title pull-left" id="helpmodal-label">Help Video</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/nPVeMgC1_5w"
+                            frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 {% endblock %}

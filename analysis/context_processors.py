@@ -17,4 +17,3 @@ def plots_images(request):
     :return:
     """
     return {'PLOTS_URL': settings.PLOTS_URL}
-

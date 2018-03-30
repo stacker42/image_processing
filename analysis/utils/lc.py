@@ -1,4 +1,5 @@
 import matplotlib
+
 matplotlib.use('Agg')
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import figure

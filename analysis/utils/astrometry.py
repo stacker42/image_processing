@@ -1,11 +1,12 @@
 import os
 import shutil
-from django.conf import settings
 import subprocess
-from subprocess import CalledProcessError
-from analysis.models import Observation, Object, FITSFile
-from astropy.io import fits
 import sys
+
+from astropy.io import fits
+from django.conf import settings
+
+from analysis.models import Observation
 
 
 def j(p1, p2):
@@ -92,7 +93,8 @@ def do_astrometry(path, file_id):
 
     # Actually solve the image using the astrometry.net solve-field command
     # We downsample and guess field to try and speed things up a bit. Don't go lower than 2 - causes problems
-    solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '2', '--overwrite']
+    solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '2',
+                     '--overwrite']
 
     subprocess.check_output(solve_command)
 
@@ -112,5 +114,5 @@ def do_astrometry(path, file_id):
     os.chdir(settings.BASE_DIR)
 
     # # Cleanup files we made earlier
-    #shutil.rmtree(WORKING_DIRECTORY)
+    # shutil.rmtree(WORKING_DIRECTORY)
     return True

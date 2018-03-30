@@ -29,14 +29,16 @@
         {% csrf_token %}
         {{ form.as_p }}
 
-        <p>The following catalog files have already been uploaded: <b><br />
-        <ul>
-            {% for key, value in catalog_files_and_names.items %}
+        <p>The following catalog files have already been uploaded: <b><br/>
+            <ul>
+                {% for key, value in catalog_files_and_names.items %}
                     <li> {{ key }} - {{ value }}</li>
-            {% endfor %}
-        </ul></b>
+                {% endfor %}
+            </ul>
+        </b>
 
-        <p><b>If you are editing an object, any files you add here will overwrite existing ones. You do not need to add any files here if you wish.</b></p>
+        <p><b>If you are editing an object, any files you add here will overwrite existing ones. You do not need to add
+            any files here if you wish.</b></p>
 
         <label for="cf_CV">Choose a clear catalog file (CV)</label>
         <input type="file" class="btn btn-default btn-file" name="cf_CV">
@@ -58,7 +60,7 @@
 
         <label for="cf_SZ">Choose a Sloan Z catalog file (SZ)</label>
         <input type="file" class="btn btn-default btn-file" name="cf_SZ">
-        <br />
+        <br/>
         <input type="submit" value="Add object to database" class="btn btn-success">
 
     </form>

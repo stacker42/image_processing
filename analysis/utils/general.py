@@ -1,14 +1,13 @@
-from django.shortcuts import HttpResponse
-from django.conf import settings
-from analysis.models import *
-from analysis.forms import *
 import os
 import shutil
-from astropy.time import Time
-from django.core.exceptions import PermissionDenied
+
 from astropy.io import fits
-import upload
+from django.conf import settings
 from django.db import connection
+from django.shortcuts import HttpResponse
+
+import upload
+from analysis.forms import *
 
 
 def make_response(status=200, content_type='text/plain', content=None):
@@ -118,4 +117,6 @@ def delete_folders(fits_file):
 
 def copy_to_photometry(observation_id):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT observation_id, calibrated_magnitude, calibrated_error, magnitude_rms_error, x, y, alpha_j2000, delta_j2000, fwhm_world, flags, magnitude INTO photometry FROM photometry_temp WHERE observation_id = %s", observation_id)
+        cursor.execute(
+            "SELECT observation_id, calibrated_magnitude, calibrated_error, magnitude_rms_error, x, y, alpha_j2000, delta_j2000, fwhm_world, flags, magnitude INTO photometry FROM photometry_temp WHERE observation_id = %s",
+            observation_id)

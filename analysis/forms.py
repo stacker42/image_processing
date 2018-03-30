@@ -1,9 +1,10 @@
 # coding=utf-8
-from django import forms
-from models import Object, Observation, ImagingDevice, FITSFile
-from registration.forms import RegistrationForm
 from captcha.fields import CaptchaField
+from django import forms
 from django.contrib.auth.models import User
+from registration.forms import RegistrationForm
+
+from models import Object, Observation, ImagingDevice, FITSFile
 
 
 class UploadFileForm(forms.Form):
@@ -25,17 +26,19 @@ class ObjectForm(forms.ModelForm):
     """
     A form for adding an object or modifying an existing one
     """
+
     class Meta:
         model = Object
         fields = ('number', 'name', 'ra', 'dec', 'cal_offset')
         labels = {'number': 'Unique object number', 'ra': 'Right Ascension (J2000) (HH MM SS)', 'dec':
-                  'Declination (J2000) ([±]Deg ArcMin ArcSec)', 'cal_offset': 'Calibration offset'}
+            'Declination (J2000) ([±]Deg ArcMin ArcSec)', 'cal_offset': 'Calibration offset'}
 
 
 class ObservationForm(forms.ModelForm):
     """
     A form for adding a new observation or modifying an existing one
     """
+
     class Meta:
         model = Observation
         fields = ('target', 'device')
@@ -78,6 +81,7 @@ class ImagingDeviceForm(forms.ModelForm):
     """
     Form to add a new imaging device or to modify an existing one
     """
+
     class Meta:
         model = ImagingDevice
         fields = ('name', 'scale', 'mirror_diameter', 'description')

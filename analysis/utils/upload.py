@@ -1,12 +1,14 @@
+import hashlib
 import os
 import os.path
 import shutil
+import time
+
 from django.conf import settings
 from django.http import HttpResponse
+
 from analysis.models import FITSFile
-import time
 from analysis.utils.fits import get_header
-import hashlib
 
 
 def check_valid_file(path, uuid):
@@ -21,6 +23,7 @@ def check_valid_file(path, uuid):
     except IOError:
         handle_deleted_file(uuid)
         return False
+
 
 # combine_chunks, save_upload, handle_upload and handled_deleted_file are based on the examples given by FineUploader
 # See: https://github.com/FineUploader/server-examples/tree/master/python/django-fine-uploader
@@ -115,7 +118,9 @@ def handle_upload(f, fileattrs, request):
             upload.fits_filename = fileattrs['qqfilename']
             upload.uploaded_by = request.user
             upload.upload_time = time.time()
-            upload.sha256 = hashlib.sha256(open(os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']), 'r').read()).hexdigest()
+            upload.sha256 = hashlib.sha256(
+                open(os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']),
+                     'r').read()).hexdigest()
             upload.process_status = 'UPLOADED'
             upload.save()
 

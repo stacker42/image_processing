@@ -11,25 +11,44 @@
         <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> Get Help
     </button>
 
-    <br />
+    <br/>
 
 
-    <p>Please check the metadata for the file you are about to process looks correct.<br /> We've detected the following values for the associated fields based on your device.</p>
+    <p>Please check the metadata for the file you are about to process looks correct.<br/> We've detected the following
+        values for the associated fields based on your device.</p>
 
     <table class="table table-striped">
-        <tr><th>Card</th><th>Value</th></tr>
-        <tr><td>Observation date [{{ device.date_card }}]({{ device.date_format }})</td><td>{{ date }}</td></tr>
-        {% if device.time_card != None %}<tr><td>Observation time [{{ device.time_card }}]</td><td>{{ time }}</td></tr>{% endif %}
-        <tr><td>Filter [{{ device.filter_card }}]</td><td>{{ filter }} [{{ used_filter }}]</td></tr>
-        <tr><td>Exposure time (s) [{{ device.exptime_card }}]</td><td>{{ exptime }}</td></tr>
+        <tr>
+            <th>Card</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Observation date [{{ device.date_card }}]({{ device.date_format }})</td>
+            <td>{{ date }}</td>
+        </tr>
+        {% if device.time_card != None %}
+            <tr>
+                <td>Observation time [{{ device.time_card }}]</td>
+                <td>{{ time }}</td>
+            </tr>{% endif %}
+        <tr>
+            <td>Filter [{{ device.filter_card }}]</td>
+            <td>{{ filter }} [{{ used_filter }}]</td>
+        </tr>
+        <tr>
+            <td>Exposure time (s) [{{ device.exptime_card }}]</td>
+            <td>{{ exptime }}</td>
+        </tr>
 
     </table>
 
     {% if used_filter is None %}
 
-        <p>The filter that you have selected is not supported by this system. You must use a filter from one of the following options:
-        {{ all_filters|join:', ' }}. You may modify the value if you know the filter you have chosen is supported. Otherwise, you must delete the file
-        or contact df@star.kent.ac.uk.</p>
+        <p>The filter that you have selected is not supported by this system. You must use a filter from one of the
+            following options:
+            {{ all_filters|join:', ' }}. You may modify the value if you know the filter you have chosen is supported.
+            Otherwise, you must delete the file
+            or contact df@star.kent.ac.uk.</p>
 
     {% endif %}
 
@@ -37,45 +56,49 @@
         <p>The filter that you have chosen is not currently supported for your selected target.</p>
     {% endif %}
 
-    <a href="{% url 'process-metadata-modify' file_id %}?date={{ date }}&filter={{ filter }}&exptime={{ exptime }}&date_format={{ device.date_format }}" class="btn btn-primary">This is incorrect, modify values</a>
-    <br /><br />
+    <a href="{% url 'process-metadata-modify' file_id %}?date={{ date }}&filter={{ filter }}&exptime={{ exptime }}&date_format={{ device.date_format }}"
+       class="btn btn-primary">This is incorrect, modify values</a>
+    <br/><br/>
     <form method="POST" action="{% url 'process-metadata' file_id %}" enctype="multipart/form-data">
         {% csrf_token %}
         <input name="delete" type="hidden" value="true">
         <input type="submit" class="btn btn-danger" value="This metadata is NOT correct, delete this file">
     </form>
-    <br />
+    <br/>
     {% if valid %}
-    <form method="POST" action="{% url 'process-metadata' file_id %}" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input name="used_filter" type="hidden" value="{{ used_filter }}">
-        <input name="delete" type="hidden" value="false">
-        <input type="submit" class="btn btn-success" value="This metadata is correct, proceed to add it to the database">
-    </form>
-    <br />
+        <form method="POST" action="{% url 'process-metadata' file_id %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input name="used_filter" type="hidden" value="{{ used_filter }}">
+            <input name="delete" type="hidden" value="false">
+            <input type="submit" class="btn btn-success"
+                   value="This metadata is correct, proceed to add it to the database">
+        </form>
+        <br/>
     {% endif %}
 
     <pre>
     {{ header }}
     </pre>
 
-    <div class="modal fade" id="helpmodal" tabindex="-1" role="dialog" aria-labelledby="helpmodal-label" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title pull-left" id="helpmodal-label">Help Video</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-          <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/nPVeMgC1_5w" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      </div>
-    </div>
-    </div>
+    <div class="modal fade" id="helpmodal" tabindex="-1" role="dialog" aria-labelledby="helpmodal-label"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title pull-left" id="helpmodal-label">Help Video</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/nPVeMgC1_5w"
+                            frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 {% endblock %}

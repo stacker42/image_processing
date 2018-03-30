@@ -2,25 +2,26 @@
 from __future__ import unicode_literals
 
 import json
-import shutil
 import os
+import shutil
+from decimal import *
+
+from astropy.time import Time
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
-from django.utils.decorators import method_decorator
-from django.core.exceptions import ObjectDoesNotExist, ValidationError, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db import connection
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from django.db.models import Q
+
 from forms import *
 from models import *
 from utils import fits, upload, astrometry, photometry, calibration, general, lc
-from astropy.time import Time
-from django.db import connection, transaction
-import json
-from decimal import *
 
 
 @login_required

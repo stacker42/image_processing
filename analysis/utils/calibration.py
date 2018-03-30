@@ -1,16 +1,19 @@
-import numpy
-from django.conf import settings
-from astropy.io import ascii
-from astropy.coordinates import SkyCoord, match_coordinates_sky
-import astropy.units as u
-from scipy.signal import medfilt
-from scipy import optimize
-from analysis.models import FITSFile, Observation, Photometry, TemporaryPhotometry
 import os
-from astropy.io import fits
 from decimal import *
+
+import astropy.units as u
 import matplotlib
+import numpy
+from astropy.coordinates import SkyCoord, match_coordinates_sky
+from astropy.io import ascii
+from astropy.io import fits
+from django.conf import settings
 from matplotlib import figure
+from scipy import optimize
+from scipy.signal import medfilt
+
+from analysis.models import FITSFile, Observation, TemporaryPhotometry
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
