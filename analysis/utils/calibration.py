@@ -281,7 +281,7 @@ def do_calibration(file_id, max_use, min_use):
         yy = y
         for i in range(0, len(y)):
             # maybe in future change the filter size to number of stars within yy mag
-            if observation.orignal_filter in settings.HA_FILTERS:
+            if observation.orignal_filter.upper() in settings.HA_FILTERS:
                 multiplier = 2
             else:
                 multiplier = 1
