@@ -283,9 +283,11 @@ def do_calibration(file_id, max_use, min_use):
             # maybe in future change the filter size to number of stars within yy mag
             if observation.orignal_filter.upper() in settings.HA_FILTERS:
                 multiplier = 2
+                summator = 1
             else:
                 multiplier = 1
-            filsize = numpy.rint(numpy.rint(x[i] ** 2 / 100.) * 2 + 1) * multiplier
+                summator = 0
+            filsize = (numpy.rint(numpy.rint(x[i] ** 2 / 100.) * 2 + 1) * multiplier) + summator
             yy[i] = medfilt(y, filsize.astype(int))[i]
         param_cal, success = optimize.leastsq(errfunc_cal, parameters, args=(y + x, x, numpy.min(x) - 2))
 
