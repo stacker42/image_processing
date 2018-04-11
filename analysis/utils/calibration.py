@@ -244,7 +244,11 @@ def do_calibration(file_id, max_use, min_use):
 
     # do the fitting
     # but remove outliers +-0.3mag based on the above med_offset
-    check = numpy.where((match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET) & (flag_m < 10) &
+    if observation.orignal_filter.upper() in settings.HA_FILTERS:
+        check = numpy.where((numpy.absolute(mag_m-match_mag-med_offset) < 1) & (match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET) & (flag_m < 10) &
+                        (match_flag < 10))
+    else:
+        check = numpy.where((match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET) & (flag_m < 10) &
                         (match_flag < 10))
 
     starsused = len(check[0])
