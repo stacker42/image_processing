@@ -418,15 +418,16 @@ def do_calibration(file_id, max_use, min_use):
             if len(check_within_1mag[0]) > 0:
                 # median = numpy.median(diff_mag[check_within_1mag[0]])
 
-                rms = numpy.nanstd(diff_mag[check_within_1mag[0]])
+                # rms = numpy.nanstd(diff_mag[check_within_1mag[0]])
+                rms = 3.0 * numpy.nanmedian(numpy.absolute(diff_mag[check_within_1mag[0]]))
 
-                check_within_1mag_2 = numpy.where((numpy.abs(diff_mag[check_within_1mag[0]]) < 4.0 * rms))
+                check_within_1mag_2 = numpy.where((numpy.abs(diff_mag[check_within_1mag[0]]) < rms))
 
                 # In the future could use median
 
-                #rms = numpy.nanstd(diff_mag[check_within_1mag[0][check_within_1mag_2[0]]])
+                rms = numpy.nanstd(diff_mag[check_within_1mag[0][check_within_1mag_2[0]]])
 
-                rms = 3.0 * numpy.nanmedian(numpy.absolute(diff_mag[check_within_1mag[0]]))
+                #rms = 3.0 * numpy.nanmedian(numpy.absolute(diff_mag[check_within_1mag_2[0]]))
 
                 uncertainty_stars[i] = rms
 
