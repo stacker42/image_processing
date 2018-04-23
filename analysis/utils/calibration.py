@@ -424,7 +424,9 @@ def do_calibration(file_id, max_use, min_use):
 
                 # In the future could use median
 
-                rms = numpy.nanstd(diff_mag[check_within_1mag[0][check_within_1mag_2[0]]])
+                #rms = numpy.nanstd(diff_mag[check_within_1mag[0][check_within_1mag_2[0]]])
+
+                rms = 3.0 * numpy.nanmedian(numpy.absolute(diff_mag[check_within_1mag[0]]))
 
                 uncertainty_stars[i] = rms
 
