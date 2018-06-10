@@ -1071,7 +1071,7 @@ class UploadView(View):
 
 def lightcurve(request):
     """
-    Let the user enter the RA and Dec for this lightcurve
+    Let the user enter the RA and Dec for this lightcurve, and plot it!
     :param request:
     :return:
     """
@@ -1079,14 +1079,9 @@ def lightcurve(request):
     ra = request.GET.get('ra')
     dec = request.GET.get('dec')
     star = request.GET.get('star')
-    user_filters = request.GET.getlist('filter')
     offsets = request.GET.getlist('offset')
-    y_limit_low = request.GET.get('ylim-low')
-    x_limit_low = request.GET.get('xlim-low')
-    y_limit_high = request.GET.get('ylim-high')
-    x_limit_high = request.GET.get('xlim-high')
 
-    if ra is not None and dec is not None and star is None and not user_filters:
+    if ra is not None and dec is not None and star is None:
         # User needs to choose a star based on ra and dec
         cursor = connection.cursor()
         cursor.execute(
@@ -1104,19 +1099,36 @@ def lightcurve(request):
         return render(request, "base_lightcurve_stars.html", {'ra': ra, 'dec': dec, 'stars': stars})
 
     elif star == "true":
-        # User has chosen a star, now we will produce a plot with all the default filters
+        # User has chosen a star, now we will produce a plot
 
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT filter FROM photometry as phot, observations as obs where phot.`observation_id` = obs.id and "
+            "SELECT filter FROM photometry as phot, observations as obs where phot.observation_id = obs.id and "
             "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 and alpha_j2000 between %s-5/3600 and %s+5/3600 "
             "and delta_j2000 between %s-5/3600 and %s+5/3600 GROUP BY filter;",
             [ra, dec, ra, ra, dec, dec])
 
-        filters = cursor.fetchall()
+        filters_from_db = cursor.fetchall()
+
+        cursor.execute(
+            "SELECT orignal_filter FROM photometry as phot, observations as obs where phot.observation_id = obs.id and "
+            "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 and alpha_j2000 between %s-5/3600 and %s+5/3600 "
+            "and delta_j2000 between %s-5/3600 and %s+5/3600 AND orignal_filter IN %s GROUP BY orignal_filter;",
+            [ra, dec, ra, ra, dec, dec, settings.HA_FILTERS])
+
+        ha_filters = cursor.fetchone()
+
+        cursor.close()
+
+        # Convert the tuple of tuples into a list - makes things much easier later on!
+        filters = [element for tupl in filters_from_db for element in tupl]
+        if len(ha_filters) > 0:
+            # If at least one result, then lets add HA filters to our list
+            filters.append('HA')
 
         colours = {'R': 'rgba(255, 0, 0, 1)', 'V': 'rgba(0, 255, 0, 1)', 'B': 'rgba(0, 0, 255, 1)',
-                   'U': 'rgb(191, 0, 255)', 'I': 'rgba(0, 0, 0, 1)', 'SZ': 'rgb(255, 250, 0)', 'CV': 'rgb(250, 0, 255)'}
+                   'U': 'rgb(191, 0, 255)', 'I': 'rgba(0, 0, 0, 1)', 'SZ': 'rgb(255, 250, 0)', 'CV': 'rgb(250, 0, 255)',
+                   'HA': 'rgb(255, 0, 229)'}
 
         traces = []
 
@@ -1124,29 +1136,33 @@ def lightcurve(request):
             offset = 0
             # Change our offset string I:3 into filter I and offset 3
             for o in offsets:
-                if o[:1] == f:
-                    offset = o[2:]
-            stars = Photometry.objects.raw(
-                "SELECT * FROM photometry AS phot, observations AS obs  WHERE phot.`observation_id` = obs.id AND "
-                "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
-                "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (phot.magnitude_rms_error != '-99') AND "
-                "obs.filter = %s;",
-                [ra, dec, ra, ra, dec, dec, f])
-            magnitudes_star = []
-            dates_star = []
-            for star in stars:
-                magnitudes_star.append(star.calibrated_magnitude + Decimal(offset))
-                dates_star.append(star.observation.date)
+                if o.split(":")[0] == f:
+                    offset = o.split(":")[1]
+            if f != 'HA':
+                stars = Photometry.objects.raw(
+                    "SELECT * FROM photometry AS phot, observations AS obs  WHERE phot.observation_id = obs.id AND "
+                    "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
+                    "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (phot.magnitude_rms_error != '-99') AND "
+                    "obs.filter = %s AND obs.orignal_filter NOT IN %s;",
+                    [ra, dec, ra, ra, dec, dec, f, settings.HA_FILTERS])
+            else:
+                # If our filter is HA, then we need to look at the original, not the calibrated into filters!
+                stars = Photometry.objects.raw(
+                    "SELECT * FROM photometry AS phot, observations AS obs  WHERE phot.observation_id = obs.id AND "
+                    "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
+                    "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (phot.magnitude_rms_error != '-99') AND "
+                    "obs.orignal_filter IN %s;",
+                    [ra, dec, ra, ra, dec, dec, settings.HA_FILTERS])
 
             traces.append(
                 Scatter(
-                    x=dates_star,
-                    y=magnitudes_star,
-                    name=f[0],
+                    x=[star.observation.date for star in stars],
+                    y=[star.calibrated_magnitude + Decimal(offset) for star in stars],
+                    name=f,
                     mode='markers',
                     marker=dict(
                         size=10,
-                        color=colours[f[0]],
+                        color=colours[f],
                         line=dict(
                             width=2,
                             color='rgb(0, 0, 0)'
@@ -1160,7 +1176,8 @@ def lightcurve(request):
             title='Lightcurve Plot',
             yaxis=dict(
                 zeroline=False,
-                title="Magnitude"
+                title="Magnitude",
+                autorange="reversed"
             ),
             xaxis=dict(
                 zeroline=False,
@@ -1171,8 +1188,6 @@ def lightcurve(request):
         fig = dict(data=traces, layout=layout)
 
         p = plot(fig, output_type='div', show_link=False, config={'modeBarButtonsToRemove': ['sendDataToCloud']})
-
-        limits = [x_limit_low, x_limit_high, y_limit_low, y_limit_high]
 
         return render(request, "base_lightcurve_plot.html", {'star': star, 'filters': filters, 'ra': ra, 'dec': dec,
                                                              'plot': p})
@@ -1201,27 +1216,16 @@ def lightcurve_download(request):
 
     w = csv.writer(response, delimiter=" ".encode('utf-8'))
     w.writerow(['id', 'calibrated_magnitude', 'calibrated_error', 'magnitude_rms_error', 'x', 'y', 'alpha_j2000',
-                'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter'])
+                'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter', 'original_filter'])
 
-    cursor = connection.cursor()
-    cursor.execute(
-        "SELECT filter FROM photometry as phot, observations as obs  where phot.`observation_id` = obs.id and "
-        "cal_offset(%s, alpha_j2000, %s, delta_j2000) <  2 and alpha_j2000 between %s-5/3600 and %s+5/3600 "
-        "and delta_j2000 between %s-5/3600 and %s+5/3600 GROUP BY filter;",
+    stars = Photometry.objects.raw(
+        "SELECT * FROM photometry AS t1, observations AS t2  WHERE t1.observation_id = t2.id AND "
+        "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
+        "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600",
         [ra, dec, ra, ra, dec, dec])
-
-    filters = cursor.fetchall()
-
-    for f in filters:
-        stars = Photometry.objects.raw(
-            "SELECT * FROM photometry AS t1, observations AS t2  WHERE t1.`observation_id` = t2.id AND "
-            "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
-            "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND "
-            "t2.filter = %s;",
-            [ra, dec, ra, ra, dec, dec, f])
-        for star in stars:
-            w.writerow([star.id, star.calibrated_magnitude, star.calibrated_error, star.magnitude_rms_error, star.x,
-                        star.y, star.alpha_j2000, star.delta_j2000, star.fwhm_world, star.flags, star.magnitude,
-                        star.observation_id, f])
+    for star in stars:
+        w.writerow([star.id, star.calibrated_magnitude, star.calibrated_error, star.magnitude_rms_error, star.x,
+                    star.y, star.alpha_j2000, star.delta_j2000, star.fwhm_world, star.flags, star.magnitude,
+                    star.observation_id, star.observation.filter, star.observation.orignal_filter])
 
     return response

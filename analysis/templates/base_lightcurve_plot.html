@@ -20,16 +20,13 @@
 
     <div id="plot">{{ plot|safe }}</div>
 
+    <br />
+
     {% for filter in filters %}
-        <input name="offset-{{ filter.0 }}"> <label for="offset-{{ filter.0 }}">Offset for {{ filter.0 }}</label>
+        <input name="offset-{{ filter }}" placeholder="Offset for {{ filter }}">
     {% endfor %}
 
-    <label for="xlim-low">x-axis limit (low)</label><input id="xlim-low" name="xlim-low">
-    <label for="xlim-high">x-axis limit (high)</label><input id="xlim-high" name="xlim-high">
-    <label for="ylim-low">y-axis limit (low)</label><input id="ylim-low" name="ylim-low">
-    <label for="ylim-high">y-axis limit (high)</label><input id="ylim-high" name="ylim-high">
-
-    <button type="button" id="update" class="btn btn-default">Update filter, offset and limit selection</button> <br />
+    <button type="button" id="update" class="btn btn-default">Update offset selection</button> <br /> <br />
 
     <a href="{% url 'lightcurve_download' %}?ra={{ ra }}&dec={{ dec }}" class="btn btn-default">Download data used to make this lightcurve</a>
 
@@ -52,8 +49,6 @@
             for (var j = 0; j < offsets.length; j++) {
                 url = url + "&offset=" + offsets[j]['name'].replace('offset-', '') + ":" + offsets[j]['value'];
             }
-
-            url = url + ($("#xlim-low").val() ? "&xlim-low=" + $("#xlim-low").val() : "") + ($("#xlim-high").val() ? "&xlim-high=" + $("#xlim-high").val() : "") + ($("#ylim-low").val() ? "&ylim-low=" + $("#ylim-low").val() : "") + ($("#ylim-high").val() ? "&ylim-high=" + $("#ylim-high").val() : "");
 
             window.location.href = encodeURI('{% url 'lightcurve' %}' + url);
         });
