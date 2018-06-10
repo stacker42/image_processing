@@ -23,6 +23,11 @@ from forms import *
 from models import *
 from utils import fits, upload, astrometry, photometry, calibration, general, lc
 
+from plotly.offline import plot
+from plotly.graph_objs import Scatter
+
+import csv, io
+
 
 @login_required
 def ul(request):
@@ -1075,12 +1080,23 @@ def lightcurve(request):
     dec = request.GET.get('dec')
     star = request.GET.get('star')
     user_filters = request.GET.getlist('filter')
+    offsets = request.GET.getlist('offset')
+    y_limit_low = request.GET.get('ylim-low')
+    x_limit_low = request.GET.get('xlim-low')
+    y_limit_high = request.GET.get('ylim-high')
+    x_limit_high = request.GET.get('xlim-high')
 
     if ra is not None and dec is not None and star is None and not user_filters:
         # User needs to choose a star based on ra and dec
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000), %s, avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  delta_j2000 between %s-360/3600 and %s+360/3600  group by round(alpha_j2000*1000,0), round(delta_j2000*1000,0), t2.filter having num > 16 order by offset_arcsec LIMIT 100;",
+            "SELECT concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, "
+            "round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),"
+            "round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000), %s, "
+            "avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  "
+            "where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  "
+            "delta_j2000 between %s-360/3600 and %s+360/3600 group by round(alpha_j2000*1000,0), "
+            "round(delta_j2000*1000,0), t2.filter having num > 16 order by offset_arcsec LIMIT 100;",
             [ra, dec, ra, ra, dec, dec])
 
         stars = cursor.fetchall()
@@ -1092,12 +1108,74 @@ def lightcurve(request):
 
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT filter FROM photometry as t1, observations as t2  where t1.`observation_id` = t2.id and cal_offset(%s, alpha_j2000, %s, delta_j2000) <  2  and alpha_j2000 between %s-5/3600 and %s+5/3600 and delta_j2000 between %s-5/3600 and %s+5/3600 GROUP BY filter;",
+            "SELECT filter FROM photometry as phot, observations as obs where phot.`observation_id` = obs.id and "
+            "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 and alpha_j2000 between %s-5/3600 and %s+5/3600 "
+            "and delta_j2000 between %s-5/3600 and %s+5/3600 GROUP BY filter;",
             [ra, dec, ra, ra, dec, dec])
 
         filters = cursor.fetchall()
 
-        return render(request, "base_lightcurve_plot.html", {'star': star, 'filters': filters, 'ra': ra, 'dec': dec})
+        colours = {'R': 'rgba(255, 0, 0, 1)', 'V': 'rgba(0, 255, 0, 1)', 'B': 'rgba(0, 0, 255, 1)',
+                   'U': 'rgb(191, 0, 255)', 'I': 'rgba(0, 0, 0, 1)', 'SZ': 'rgb(255, 250, 0)', 'CV': 'rgb(250, 0, 255)'}
+
+        traces = []
+
+        for f in filters:
+            offset = 0
+            # Change our offset string I:3 into filter I and offset 3
+            for o in offsets:
+                if o[:1] == f:
+                    offset = o[2:]
+            stars = Photometry.objects.raw(
+                "SELECT * FROM photometry AS phot, observations AS obs  WHERE phot.`observation_id` = obs.id AND "
+                "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
+                "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (t1.magnitude_rms_error != '-99') AND "
+                "t2.filter = %s;",
+                [ra, dec, ra, ra, dec, dec, f])
+            magnitudes_star = []
+            dates_star = []
+            for star in stars:
+                magnitudes_star.append(star.calibrated_magnitude + Decimal(offset))
+                dates_star.append(star.observation.date)
+
+            traces.append(
+                Scatter(
+                    x=dates_star,
+                    y=magnitudes_star,
+                    name=f[0],
+                    mode='markers',
+                    marker=dict(
+                        size=10,
+                        color=colours[f[0]],
+                        line=dict(
+                            width=2,
+                            color='rgb(0, 0, 0)'
+                        )
+                    )
+
+                )
+            )
+
+        layout = dict(
+            title='Lightcurve Plot',
+            yaxis=dict(
+                zeroline=False,
+                title="Magnitude"
+            ),
+            xaxis=dict(
+                zeroline=False,
+                title="Time (JD)",
+                tickformat="f"
+            )
+        )
+        fig = dict(data=traces, layout=layout)
+
+        p = plot(fig, output_type='div', show_link=False, config={'modeBarButtonsToRemove': ['sendDataToCloud']})
+
+        limits = [x_limit_low, x_limit_high, y_limit_low, y_limit_high]
+
+        return render(request, "base_lightcurve_plot.html", {'star': star, 'filters': filters, 'ra': ra, 'dec': dec,
+                                                             'plot': p})
 
     else:
         form = RADecForm()
@@ -1105,54 +1183,45 @@ def lightcurve(request):
         return render(request, "base_lightcurve.html", {'form': form})
 
 
-def lightcurve_plot(request):
+def lightcurve_download(request):
     """
-    Output as an image the actual lightcurve plot, based on parameters passed to the query string
+    Download the data used to generate a lightcurve
     :param request:
     :return:
     """
-    user_ra = request.GET.get('ra')
-    user_dec = request.GET.get('dec')
-    user_filters = request.GET.getlist('filter')
-    offsets = request.GET.getlist('offset')
-    y_limit_low = request.GET.get('ylim-low')
-    x_limit_low = request.GET.get('xlim-low')
-    y_limit_high = request.GET.get('ylim-high')
-    x_limit_high = request.GET.get('xlim-high')
 
-    colours = {'R': 'red', 'V': 'green', 'B': 'blue', 'U': 'purple', 'I': 'black', 'SZ': 'yellow', 'CV': 'm'}
-    shapes = {'R': 's', 'V': 'v', 'B': 'p', 'U': '8', 'I': '*', 'SZ': 'x', 'CV': '^'}
+    ra = request.GET.get('ra')
+    dec = request.GET.get('dec')
 
-    magnitudes = []
-    dates = []
+    if ra is None or dec is None:
+        raise Http404
 
-    for f in user_filters:
-        offset = 0
-        # Change our offset string I:3 into filter I and offset 3
-        for o in offsets:
-            if o[:1] == f:
-                offset = o[2:]
-        data_m = {}
-        data_d = {}
-        data_m['filter'] = f
-        # cursor = connection.cursor("SELECT * FROM photometry AS t1, observation AS t2  WHERE t1.`observation_id` = t2.id AND cal_offset(ra_source, alpha_j2000, dec_source, delta_j2000) <  2 AND alpha_j2000 BETWEEN ra_source-5/3600 AND ra_source+5/3600 AND delta_j2000 BETWEEN dec_source-5/3600 AND dec_source +5/3600 AND t1.magnitude_rms_error NOT -99 AND t2.filter = %s;", [f])
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="lightcurve_' + ra + '_' + dec + '.txt"'
+
+    w = csv.writer(response, delimiter=" ".encode('utf-8'))
+    w.writerow(['id', 'calibrated_magnitude', 'calibrated_error', 'magnitude_rms_error', 'x', 'y', 'alpha_j2000',
+                'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter'])
+
+    cursor = connection.cursor()
+    cursor.execute(
+        "SELECT filter FROM photometry as phot, observations as obs  where phot.`observation_id` = obs.id and "
+        "cal_offset(%s, alpha_j2000, %s, delta_j2000) <  2 and alpha_j2000 between %s-5/3600 and %s+5/3600 "
+        "and delta_j2000 between %s-5/3600 and %s+5/3600 GROUP BY filter;",
+        [ra, dec, ra, ra, dec, dec])
+
+    filters = cursor.fetchall()
+
+    for f in filters:
         stars = Photometry.objects.raw(
-            "SELECT * FROM photometry AS t1, observations AS t2  WHERE t1.`observation_id` = t2.id AND cal_offset(%s, alpha_j2000, %s, delta_j2000) <  2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (t1.magnitude_rms_error != '-99') AND t2.filter = %s;",
-            [user_ra, user_dec, user_ra, user_ra, user_dec, user_dec, f])
-        # stars = Photometry.objects.filter(~Q(magnitude_rms_error=-99), alpha_j2000__range=(float(user_ra)-360/3600, float(user_ra)-360/3600), delta_j2000__range=(float(user_dec)-360/3600, float(user_dec)-360/3600), observation__filter=f)
-        magnitudes_star = []
-        dates_star = []
+            "SELECT * FROM photometry AS t1, observations AS t2  WHERE t1.`observation_id` = t2.id AND "
+            "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
+            "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND "
+            "t2.filter = %s;",
+            [ra, dec, ra, ra, dec, dec, f])
         for star in stars:
-            magnitudes_star.append(star.calibrated_magnitude + Decimal(offset))
-            dates_star.append(star.observation.date)
-        data_m['magnitudes'] = magnitudes_star
-        data_d['dates'] = dates_star
+            w.writerow([star.id, star.calibrated_magnitude, star.calibrated_error, star.magnitude_rms_error, star.x,
+                        star.y, star.alpha_j2000, star.delta_j2000, star.fwhm_world, star.flags, star.magnitude,
+                        star.observation_id, f])
 
-        magnitudes.append(data_m)
-        dates.append(data_d)
-
-    limits = [x_limit_low, x_limit_high, y_limit_low, y_limit_high]
-
-    image = lc.image_plot(dates, magnitudes, "Time (JD)", "Magnitude", limits, colours, shapes)
-
-    return HttpResponse(image.read(), content_type="image/png")
+    return response

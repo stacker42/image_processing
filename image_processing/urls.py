@@ -52,7 +52,7 @@ urlpatterns = [
     url(r'delete/file/(?P<file_id>[0-9]+)/$', views.delete_file, name='delete_file'),
 
     url(r'lightcurve/$', views.lightcurve, name='lightcurve'),
-    url(r'lightcurve/plot/$', views.lightcurve_plot, name='lightcurve_plot'),
+    url(r'lightcurve/download/$', views.lightcurve_download, name='lightcurve_download'),
 
     url(r'^captcha/', include('captcha.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.ASTROMETRY_URL, document_root='temporary/astrometry/') + static(settings.PLOTS_URL, document_root='data/plots')
