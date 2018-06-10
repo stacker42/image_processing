@@ -1129,8 +1129,8 @@ def lightcurve(request):
             stars = Photometry.objects.raw(
                 "SELECT * FROM photometry AS phot, observations AS obs  WHERE phot.`observation_id` = obs.id AND "
                 "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
-                "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (t1.magnitude_rms_error != '-99') AND "
-                "t2.filter = %s;",
+                "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (phot.magnitude_rms_error != '-99') AND "
+                "obs.filter = %s;",
                 [ra, dec, ra, ra, dec, dec, f])
             magnitudes_star = []
             dates_star = []
