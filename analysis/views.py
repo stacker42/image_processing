@@ -1159,6 +1159,12 @@ def lightcurve(request):
                 Scatter(
                     x=[star.observation.date for star in stars],
                     y=[star.calibrated_magnitude + Decimal(offset) for star in stars],
+                    error_y=dict(
+                        type='data',
+                        array=[star.calibrated_error for star in stars],
+                        visible=True,
+                        color=colours[f],
+                    ),
                     name=f + " [" + str(offset) + "]" if offset != 0 else f,
                     mode='markers',
                     marker=dict(
@@ -1217,7 +1223,8 @@ def lightcurve_download(request):
 
     w = csv.writer(response, delimiter=" ".encode('utf-8'))
     w.writerow(['id', 'calibrated_magnitude', 'calibrated_error', 'magnitude_rms_error', 'x', 'y', 'alpha_j2000',
-                'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter', 'original_filter', 'date'])
+                'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter', 'original_filter',
+                'date', 'user_id', 'device_id'])
 
     stars = Photometry.objects.raw(
         "SELECT * FROM photometry AS t1, observations AS t2  WHERE t1.observation_id = t2.id AND "
@@ -1227,6 +1234,7 @@ def lightcurve_download(request):
     for star in stars:
         w.writerow([star.id, star.calibrated_magnitude, star.calibrated_error, star.magnitude_rms_error, star.x,
                     star.y, star.alpha_j2000, star.delta_j2000, star.fwhm_world, star.flags, star.magnitude,
-                    star.observation_id, star.observation.filter, star.observation.orignal_filter, star.observation.date])
+                    star.observation_id, star.observation.filter, star.observation.orignal_filter,
+                    star.observation.date, star.observation.user_id, star.observation.device_id])
 
     return response
