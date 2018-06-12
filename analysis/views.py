@@ -1139,12 +1139,15 @@ def lightcurve(request):
 
         traces = []
 
+        filters_and_offsets = {}
+
         for f in filters:
             offset = 0
             # Change our offset string I:3 into filter I and offset 3
             for o in offsets:
                 if o.split(":")[0] == f:
                     offset = o.split(":")[1]
+                    filters_and_offsets[f] = offset
             if f != 'HA':
                 stars = Photometry.objects.raw(
                     "SELECT * FROM photometry AS phot, observations AS obs  WHERE phot.observation_id = obs.id AND "
@@ -1203,7 +1206,8 @@ def lightcurve(request):
         p = plot(fig, output_type='div', show_link=False, config={'modeBarButtonsToRemove': ['sendDataToCloud']})
 
         return render(request, "base_lightcurve_plot.html", {'star': star, 'filters': filters, 'ra': ra, 'dec': dec,
-                                                             'plot': p})
+                                                             'plot': p, 'filters_and_offsets': filters_and_offsets,
+                                                             'errorbars': errorbars})
 
     else:
         form = RADecForm()

@@ -26,11 +26,11 @@
             {% for filter in filters %}
                 <div class="col-sm-2">
                     <input class="form-control form-control-sm" name="offset-{{ filter }}"
-                           placeholder="Offset for {{ filter }}">
+                           placeholder="Offset for {{ filter }}" {% for f, o in filters_and_offsets.items %}{% if f == filter %}value="{{ o }}"{% endif %}{% endfor %}>
                 </div>
             {% endfor %}
             <div class="col-sm-2">
-                <input id="errorbars" class="form-check-input" name="errorbars" type="checkbox"> <label
+                <input id="errorbars" class="form-check-input" name="errorbars" type="checkbox" {% if errorbars %}checked{% endif %}> <label
                     for="errorbars" class="form-check-label">Enable error bars</label>
             </div>
             <div class="col-sm-2">
@@ -46,7 +46,7 @@
 
     <script type="application/javascript">
         /**
-         * Load in our lightcurve based on the form input
+         * Update lightcurve based on form input
          */
         $("#update").click(function () {
             $('#genmodal').modal('show');
