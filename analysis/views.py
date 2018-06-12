@@ -1080,6 +1080,12 @@ def lightcurve(request):
     dec = request.GET.get('dec')
     star = request.GET.get('star')
     offsets = request.GET.getlist('offset')
+    eb = request.GET.get('errorbars')
+
+    if eb is not None and eb == "true":
+        errorbars = True
+    else:
+        errorbars = False
 
     if ra is not None and dec is not None and star is None:
         # User needs to choose a star based on ra and dec
@@ -1162,7 +1168,7 @@ def lightcurve(request):
                     error_y=dict(
                         type='data',
                         array=[star.calibrated_error for star in stars],
-                        visible=True,
+                        visible=errorbars,
                         color=colours[f],
                     ),
                     name=f + " [" + str(offset) + "]" if offset != 0 else f,

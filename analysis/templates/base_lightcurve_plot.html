@@ -21,13 +21,27 @@
     <div id="plot">{{ plot|safe }}</div>
 
     <br />
-
-    {% for filter in filters %}
-        <input name="offset-{{ filter }}" placeholder="Offset for {{ filter }}">
-    {% endfor %}
-
-    <button type="button" id="update" class="btn btn-default">Update offset selection</button> <br /> <br />
-
+    <form>
+        <div class="form-row">
+            {% for filter in filters %}
+                <div class="col-sm-2">
+                    <input class="form-control form-control-sm" name="offset-{{ filter }}"
+                           placeholder="Offset for {{ filter }}">
+                </div>
+            {% endfor %}
+            <div class="col-sm-2">
+                <input id="errorbars" class="form-check-input" name="errorbars" type="checkbox"> <label
+                    for="errorbars" class="form-check-label">Enable error bars</label>
+            </div>
+            <div class="col-sm-2">
+                <button type="button" id="update" class="btn btn-default">Update graph</button>
+            </div>
+        </div>
+    </form>
+    <br />
+    <br />
+    <br />
+    <br />
     <a href="{% url 'lightcurve_download' %}?ra={{ ra }}&dec={{ dec }}" class="btn btn-default">Download data used to make this lightcurve</a>
 
     <script type="application/javascript">
@@ -48,6 +62,11 @@
 
             for (var j = 0; j < offsets.length; j++) {
                 url = url + "&offset=" + offsets[j]['name'].replace('offset-', '') + ":" + offsets[j]['value'];
+            }
+            if($('#errorbars').is(":checked")) {
+                url = url + "&errorbars=true";
+            } else {
+                url = url + "&errorbars=false";
             }
 
             window.location.href = encodeURI('{% url 'lightcurve' %}' + url);
