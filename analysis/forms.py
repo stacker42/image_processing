@@ -125,3 +125,20 @@ class RADecForm(forms.Form):
     """
     ra = forms.CharField(label="RA")
     dec = forms.CharField(label="Dec")
+
+
+class LightcurveSearchForm(forms.Form):
+    """
+    Form to enter data for a lightcurve search
+    """
+    user_input = forms.CharField(label="Input")
+    radius = forms.CharField(label="Radius (arcsec)", required=False)
+    coordinate_frame = forms.ChoiceField(label="Co-ordinate frame", choices=(
+        ('fk5', 'FK5'),
+        ('icrs', 'ICRS'),
+        ('fk4', 'FK4'),
+    ), required=False)
+    input_type = forms.ChoiceField(label="Type of input", choices=(
+        ('NAME', 'Name'),
+        ('COORD', 'Co-ordinates'),
+    ))

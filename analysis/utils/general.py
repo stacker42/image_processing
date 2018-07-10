@@ -8,6 +8,8 @@ from django.shortcuts import HttpResponse
 
 import upload
 from analysis.forms import *
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 
 def make_response(status=200, content_type='text/plain', content=None):
@@ -120,3 +122,20 @@ def copy_to_photometry(observation_id):
         cursor.execute(
             "SELECT observation_id, calibrated_magnitude, calibrated_error, magnitude_rms_error, x, y, alpha_j2000, delta_j2000, fwhm_world, flags, magnitude INTO photometry FROM photometry_temp WHERE observation_id = %s",
             observation_id)
+
+def withinradius(star_to_check, ra, dec):
+    """
+    Check whether a star is within a radius of 3 arcseconds
+    :param star_to_check: The star to check
+    :param ra: RA bound
+    :param dec: DEC bound
+    :return: True or False
+    """
+
+    star_to_check_coords = SkyCoord(star_to_check['alpha_j2000'], star_to_check['delta_j200'], unit=u.degree, frame='icrs')
+
+    #if (ra - 3/3600) <= star_to_check['alpha_j2000'] <= (ra + 3/3600) and (dec - 3/3600) <= star_to_check['delta_j2000'] <= (dec + 3/3600):
+    #if star_to_check['alpha_j2000'] >= (ra - (3/3600)) and star_to_check['alpha_j2000'] <= (ra + (3/3600)) and star_to_check['delta_j2000'] >= (dec - (3/3600)) and star_to_check['delta_j2000'] <= (dec + (3/3600)):
+    #    return True
+    #else:
+    #    return False

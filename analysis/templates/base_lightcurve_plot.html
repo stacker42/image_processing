@@ -42,7 +42,7 @@
     <br />
     <br />
     <br />
-    <a href="{% url 'lightcurve_download' %}?ra={{ ra }}&dec={{ dec }}" class="btn btn-default">Download data used to make this lightcurve</a>
+    <a href="{% url 'lightcurve_download' %}?choice={{ choice }}" class="btn btn-default">Download data used to make this lightcurve</a>
 
     <script type="application/javascript">
         /**
@@ -58,7 +58,7 @@
                 }
             });
 
-            var url = "?star=true&ra={{ ra }}&dec={{ dec }}";
+            var url = "?plot=1&choice={{ choice }}";
 
             for (var j = 0; j < offsets.length; j++) {
                 url = url + "&offset=" + offsets[j]['name'].replace('offset-', '') + ":" + offsets[j]['value'];

@@ -11,12 +11,10 @@
     <table class="table table-striped">
         <tr>
             <th>HOYS-CAPS Name</th>
-            <th>Offset from your co-ordinates (arcsec)</th>
         </tr>
-        {% for star in stars %}
+        {% for choice in user_choices %}
             <tr>
-                <td><a href="{% url 'lightcurve' %}?star=true&ra={{ star.1 }}&dec={{ star.2 }}">{{ star.0 }}</a></td>
-                <td>{{ star.7 }}</td>
+                <td><a href="{% url 'lightcurve' %}?plot=1&choice={{ choice }}">{{ choice }}</a></td>
             </tr>
         {% endfor %}
     </table>

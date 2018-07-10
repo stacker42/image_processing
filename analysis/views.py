@@ -25,9 +25,12 @@ from utils import fits, upload, astrometry, photometry, calibration, general, lc
 
 from plotly.offline import plot
 from plotly.graph_objs import Scatter
-
-import csv, io
-
+import csv
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+import numpy
+from operator import itemgetter
+import matplotlib.pyplot as plt
 
 @login_required
 def ul(request):
@@ -1076,62 +1079,142 @@ def lightcurve(request):
     :return:
     """
 
-    ra = request.GET.get('ra')
-    dec = request.GET.get('dec')
-    star = request.GET.get('star')
+    is_plot = request.GET.get('plot')
     offsets = request.GET.getlist('offset')
     eb = request.GET.get('errorbars')
+    user_input = request.GET.get('user_input')
 
     if eb is not None and eb == "true":
         errorbars = True
     else:
         errorbars = False
 
-    if ra is not None and dec is not None and star is None:
-        # User needs to choose a star based on ra and dec
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT concat(round(avg(alpha_j2000),4),if(delta_j2000 > 0,'+','-'), round(avg(delta_j2000),4)) as name, "
-            "round(avg(alpha_j2000),4) as ra, round(avg(delta_j2000),4) as de, round(stddev(alpha_j2000)*3600,1),"
-            "round(stddev(delta_j2000)*3600,1), count(*) as num, filter, cal_offset(%s, avg(alpha_j2000), %s, "
-            "avg(delta_j2000)) as offset_arcsec  FROM photometry as t1, observations as t2  "
-            "where t1.`observation_id` = t2.id and alpha_j2000 between %s-360/3600 and  %s+360/3600 and  "
-            "delta_j2000 between %s-360/3600 and %s+360/3600 group by round(alpha_j2000*1000,0), "
-            "round(delta_j2000*1000,0), t2.filter having num > 16 order by offset_arcsec LIMIT 100;",
-            [ra, dec, ra, ra, dec, dec])
+    if user_input is not None:
+        # Convert whatever the user has entered into some RA and DEC co-ords we can use
+        form = LightcurveSearchForm(request.GET)
+        if form.is_valid():
+            if form.cleaned_data['input_type'] == "NAME":
+                # Lookup using name
+                coords = SkyCoord.from_name(form.cleaned_data['user_input'])
+            else:
+                # Get the users co-ordinates into astropy SkyCoords so we can manipiulate them easily
+                try:
+                    if form.cleaned_data['coordinate_frame']:
+                        coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'])
+                    else:
+                        # Default to fk5
+                        coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5')
+                except ValueError:
+                    if form.cleaned_data['coordinate_frame']:
+                        coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'], unit=u.degree)
+                    else:
+                        # Default to fk5
+                        coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5', unit=u.degree)
 
-        stars = cursor.fetchall()
+            # Covert whatever we have got to FK5
+            coords = coords.transform_to('fk5')
 
-        return render(request, "base_lightcurve_stars.html", {'ra': ra, 'dec': dec, 'stars': stars})
+            if form.cleaned_data['radius']:
+                radius = form.cleaned_data['radius']
+            else:
+                radius = 5
 
-    elif star == "true":
+            if coords.dec.degree == 90:
+                dec = 89.99999
+            else:
+                dec = coords.dec.degree
+
+            # Get all stars within radius
+            stars = Photometry.objects.raw("SELECT * FROM photometry WHERE alpha_j2000 BETWEEN %s-(%s/3600 / COS(%s * PI() / 180)) AND "
+                                           "%s+(%s/3600 / COS(%s * PI() / 180)) AND delta_j2000 BETWEEN %s-%s/3600 AND %s+%s/3600;",
+                                           [coords.ra.degree, radius, dec, coords.ra.degree, radius, dec, dec,
+                                            radius, dec, radius])
+
+            request.session['lightcurve_data'] = {}
+            lightcurve_data = {}
+
+            lightcurve_data['stars'] = []
+            lightcurve_data['filters'] = []
+            for star in stars:
+                if star.observation.orignal_filter in settings.HA_FILTERS:
+                    lightcurve_data['stars'].append({'date': star.observation.date,
+                                                    'calibrated_magnitude': star.calibrated_magnitude,
+                                                    'alpha_j2000': star.alpha_j2000,
+                                                    'delta_j2000': star.delta_j2000,
+                                                    'calibrated_error': star.calibrated_error,
+                                                    'id': star.id,
+                                                    'filter': 'HA'})
+                    lightcurve_data['filters'].append("HA")
+                else:
+                    lightcurve_data['stars'].append({'date': star.observation.date,
+                                                                              'calibrated_magnitude': star.calibrated_magnitude,
+                                                                                'alpha_j2000': star.alpha_j2000,
+                                                                                'delta_j2000': star.delta_j2000,
+                                                                                'calibrated_error': star.calibrated_error,
+                                                                                'id': star.id,
+                                                                                'filter': star.observation.filter})
+                    lightcurve_data['filters'].append(star.observation.filter)
+
+            # Get rid of duplicates
+            lightcurve_data['filters'] = list(set(lightcurve_data['filters']))
+
+            stars_for_filter = sorted(lightcurve_data['stars'], key=itemgetter('calibrated_magnitude'), reverse=True)
+            coord_list = SkyCoord(map(itemgetter('alpha_j2000'), stars_for_filter), map(itemgetter('delta_j2000'), stars_for_filter), frame='fk5', unit=u.degree)
+            mag_list = numpy.array(map(itemgetter('calibrated_magnitude'), stars_for_filter))
+
+            index_array = numpy.zeros(len(stars_for_filter), dtype=int)
+            check_not_indexed = numpy.where(index_array < 0.5)
+            while len(check_not_indexed[0]) != 0:
+                coord_1 = coord_list[check_not_indexed[0][0]]
+                d2d = coord_1.separation(coord_list)
+                check_samesource = numpy.where(d2d.arcsec < 10)
+                index_array[check_samesource[0]] = numpy.max(index_array) + 1
+                check_not_indexed = numpy.where(index_array < 0.5)
+
+            median_ra = numpy.zeros(int(numpy.max(index_array)), dtype=float)
+            median_dec = numpy.zeros(int(numpy.max(index_array)), dtype=float)
+            median_mag = numpy.zeros(int(numpy.max(index_array)), dtype=float)
+
+            lightcurve_data['seperated'] = {}
+            lightcurve_data['medianmag'] = {}
+
+            array_stars = numpy.asarray(lightcurve_data['stars'])
+
+            for i in range(0, len(median_ra)):
+                check_in_index_array = numpy.where(index_array == i + 1)
+                median_ra[i] = numpy.median(coord_list[check_in_index_array[0]].ra.degree)
+                median_dec[i] = numpy.median(coord_list[check_in_index_array[0]].dec.degree)
+                median_mag[i] = numpy.min(mag_list[check_in_index_array[0]])
+                key = str(median_ra[i]) + " " + str(median_dec[i])
+                lightcurve_data['seperated'][key] = []
+
+                lightcurve_data['seperated'][key] = array_stars[check_in_index_array[0]]
+                lightcurve_data['medianmag'][key] = median_mag[i]
+
+            user_choices = lightcurve_data['seperated'].keys()
+
+            request.session['lightcurve_data'] = lightcurve_data
+
+            # MedFilter line plot
+            #plt.scatter(map(itemgetter('alpha_j2000'), stars_for_filter), map(itemgetter('delta_j2000'), stars_for_filter))
+            #plt.scatter(median_ra, median_dec, s=(18-median_mag)*10, c='red', marker='o')
+
+            #plt.savefig('/tmp/test.png', format='png')
+            #plt.clf()
+
+            return render(request, "base_lightcurve_stars.html", {'user_choices': user_choices})
+
+    elif is_plot == '1':
         # User has chosen a star, now we will produce a plot
 
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT filter FROM photometry as phot, observations as obs where phot.observation_id = obs.id and "
-            "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 and alpha_j2000 between %s-5/3600 and %s+5/3600 "
-            "and delta_j2000 between %s-5/3600 and %s+5/3600 GROUP BY filter;",
-            [ra, dec, ra, ra, dec, dec])
+        choice = request.GET.get('choice')
 
-        filters_from_db = cursor.fetchall()
+        lightcurve_data = request.session.get('lightcurve_data')
 
-        cursor.execute(
-            "SELECT orignal_filter FROM photometry as phot, observations as obs where phot.observation_id = obs.id and "
-            "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 and alpha_j2000 between %s-5/3600 and %s+5/3600 "
-            "and delta_j2000 between %s-5/3600 and %s+5/3600 AND orignal_filter IN %s GROUP BY orignal_filter;",
-            [ra, dec, ra, ra, dec, dec, settings.HA_FILTERS])
+        if lightcurve_data is None:
+            return redirect('lightcurve' + "?user_input=" + choice + "&radius=5&coordinate_frame=fk5&input_type=COORD")
 
-        ha_filters = cursor.fetchone()
-
-        cursor.close()
-
-        # Convert the tuple of tuples into a list - makes things much easier later on!
-        filters = [element for tupl in filters_from_db for element in tupl]
-        if ha_filters is not None:
-            if len(ha_filters) > 0:
-                # If at least one result, then lets add HA filters to our list
-                filters.append('HA')
+        filters = lightcurve_data['filters']
 
         colours = {'R': 'rgba(255, 0, 0, 1)', 'V': 'rgba(0, 255, 0, 1)', 'B': 'rgba(0, 0, 255, 1)',
                    'U': 'rgb(191, 0, 255)', 'I': 'rgba(0, 0, 0, 1)', 'SZ': 'rgb(255, 250, 0)', 'CV': 'rgb(250, 0, 255)',
@@ -1142,51 +1225,42 @@ def lightcurve(request):
         filters_and_offsets = {}
 
         for f in filters:
-            offset = 0
-            # Change our offset string I:3 into filter I and offset 3
-            for o in offsets:
-                if o.split(":")[0] == f:
-                    offset = o.split(":")[1]
-                    filters_and_offsets[f] = offset
-            if f != 'HA':
-                stars = Photometry.objects.raw(
-                    "SELECT * FROM photometry AS phot, observations AS obs  WHERE phot.observation_id = obs.id AND "
-                    "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
-                    "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (phot.magnitude_rms_error != '-99') AND "
-                    "obs.filter = %s AND obs.orignal_filter NOT IN %s;",
-                    [ra, dec, ra, ra, dec, dec, f, settings.HA_FILTERS])
-            else:
-                # If our filter is HA, then we need to look at the original, not the calibrated into filters!
-                stars = Photometry.objects.raw(
-                    "SELECT * FROM photometry AS phot, observations AS obs  WHERE phot.observation_id = obs.id AND "
-                    "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
-                    "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600 AND (phot.magnitude_rms_error != '-99') AND "
-                    "obs.orignal_filter IN %s;",
-                    [ra, dec, ra, ra, dec, dec, settings.HA_FILTERS])
+            try:
+                offset = 0
+                # Change our offset string I:3 into filter I and offset 3
+                for o in offsets:
+                    if o.split(":")[0] == f:
+                        offset = o.split(":")[1]
+                        filters_and_offsets[f] = offset
 
-            traces.append(
-                Scatter(
-                    x=[star.observation.date for star in stars],
-                    y=[star.calibrated_magnitude + Decimal(offset) for star in stars],
-                    error_y=dict(
-                        type='data',
-                        array=[star.calibrated_error for star in stars],
-                        visible=errorbars,
-                        color=colours[f],
-                    ),
-                    name=f + " [" + str(offset) + "]" if offset != 0 else f,
-                    mode='markers',
-                    marker=dict(
-                        size=10,
-                        color=colours[f],
-                        line=dict(
-                            width=2,
-                            color='rgb(0, 0, 0)'
+                traces.append(
+                    Scatter(
+                        # Need to except KeyError and go onto the next filter here
+                        x=[star['date'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f],
+                        y=[star['calibrated_magnitude'] + Decimal(offset) for star in lightcurve_data['seperated'][choice] if star['filter'] == f],
+                        error_y=dict(
+                            type='data',
+                            array=[star['calibrated_error'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f],
+                            visible=errorbars,
+                            color=colours[f],
+                        ),
+                        name=f + " [" + str(offset if offset < 0 else "+" + offset) + " mag]" if offset != 0 else f,
+                        mode='markers',
+                        marker=dict(
+                            size=10,
+                            color=colours[f],
+                            line=dict(
+                                width=2,
+                                color='rgb(0, 0, 0)'
+                            )
                         )
-                    )
 
+                    )
                 )
-            )
+            except KeyError as e:
+                print e
+                # We don't have any data for this choice for filter, so lets just go onto the next one!
+                pass
 
         layout = dict(
             title='Lightcurve Plot',
@@ -1205,12 +1279,12 @@ def lightcurve(request):
 
         p = plot(fig, output_type='div', show_link=False, config={'modeBarButtonsToRemove': ['sendDataToCloud']})
 
-        return render(request, "base_lightcurve_plot.html", {'star': star, 'filters': filters, 'ra': ra, 'dec': dec,
+        return render(request, "base_lightcurve_plot.html", {'filters': filters,
                                                              'plot': p, 'filters_and_offsets': filters_and_offsets,
-                                                             'errorbars': errorbars})
+                                                             'errorbars': errorbars, 'choice': choice})
 
     else:
-        form = RADecForm()
+        form = LightcurveSearchForm()
 
         return render(request, "base_lightcurve.html", {'form': form})
 
@@ -1234,7 +1308,7 @@ def lightcurve_download(request):
     w = csv.writer(response, delimiter=" ".encode('utf-8'))
     w.writerow(['id', 'calibrated_magnitude', 'calibrated_error', 'magnitude_rms_error', 'x', 'y', 'alpha_j2000',
                 'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter', 'original_filter',
-                'date', 'user_id', 'device_id'])
+                'date', 'user_id', 'device_id', 'target'])
 
     stars = Photometry.objects.raw(
         "SELECT * FROM photometry AS t1, observations AS t2  WHERE t1.observation_id = t2.id AND "
@@ -1245,6 +1319,6 @@ def lightcurve_download(request):
         w.writerow([star.id, star.calibrated_magnitude, star.calibrated_error, star.magnitude_rms_error, star.x,
                     star.y, star.alpha_j2000, star.delta_j2000, star.fwhm_world, star.flags, star.magnitude,
                     star.observation_id, star.observation.filter, star.observation.orignal_filter,
-                    star.observation.date, star.observation.user_id, star.observation.device_id])
+                    star.observation.date, star.observation.user_id, star.observation.device_id, star.observation.target])
 
     return response
