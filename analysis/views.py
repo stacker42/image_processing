@@ -1144,16 +1144,20 @@ def lightcurve(request):
                                                     'calibrated_error': star.calibrated_error,
                                                     'id': star.id,
                                                     'filter': 'HA'})
-                    lightcurve_data['filters'].append("HA")
+                    lightcurve_data['filters'].append('HA')
                 else:
                     lightcurve_data['stars'].append({'date': star.observation.date,
-                                                                              'calibrated_magnitude': star.calibrated_magnitude,
-                                                                                'alpha_j2000': star.alpha_j2000,
-                                                                                'delta_j2000': star.delta_j2000,
-                                                                                'calibrated_error': star.calibrated_error,
-                                                                                'id': star.id,
-                                                                                'filter': star.observation.filter})
+                                                    'calibrated_magnitude': star.calibrated_magnitude,
+                                                    'alpha_j2000': star.alpha_j2000,
+                                                    'delta_j2000': star.delta_j2000,
+                                                    'calibrated_error': star.calibrated_error,
+                                                    'id': star.id,
+                                                    'filter': star.observation.filter})
                     lightcurve_data['filters'].append(star.observation.filter)
+
+            if len(lightcurve_data['stars']) == 0:
+                    return render(request, "base_lightcurve.html",
+                                  {'form': form, 'error': 'No stars found for given co-ordinates'})
 
             # Get rid of duplicates
             lightcurve_data['filters'] = list(set(lightcurve_data['filters']))
@@ -1296,25 +1300,59 @@ def lightcurve_download(request):
     :return:
     """
 
-    ra = request.GET.get('ra')
-    dec = request.GET.get('dec')
+    user_input = request.GET.get('user_input')
+    input_type = request.GET.get('input_type')
+    coordinate_frame = request.GET.get('coordinate_frame')
+    radius = request.GET.get('radius')
 
-    if ra is None or dec is None:
-        raise Http404
+    if input_type == "NAME":
+        # Lookup using name
+        coords = SkyCoord.from_name(user_input)
+    else:
+        # Get the users co-ordinates into astropy SkyCoords so we can manipiulate them easily
+        try:
+            if coordinate_frame:
+                coords = SkyCoord(user_input, frame=coordinate_frame)
+            else:
+                # Default to fk5
+                coords = SkyCoord(user_input, frame='fk5')
+        except ValueError:
+            print "valerror"
+            if coordinate_frame:
+                coords = SkyCoord(user_input, frame=coordinate_frame,
+                                  unit=u.degree)
+            else:
+                # Default to fk5
+                coords = SkyCoord(user_input, frame='fk5', unit=u.degree)
+
+    # Covert whatever we have got to FK5
+    coords = coords.transform_to('fk5')
+
+    if radius:
+        radius = radius
+    else:
+        radius = 5
+
+    if coords.dec.degree == 90:
+        dec = 89.99999
+    else:
+        dec = coords.dec.degree
+
+    # Get all stars within radius
+    stars = Photometry.objects.raw(
+        "SELECT * FROM photometry WHERE alpha_j2000 BETWEEN %s-(%s/3600 / COS(%s * PI() / 180)) AND "
+        "%s+(%s/3600 / COS(%s * PI() / 180)) AND delta_j2000 BETWEEN %s-%s/3600 AND %s+%s/3600;",
+        [coords.ra.degree, radius, dec, coords.ra.degree, radius, dec, dec,
+         radius, dec, radius])
 
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="lightcurve_' + ra + '_' + dec + '.txt"'
+    response['Content-Disposition'] = 'attachment; filename="lightcurve_' + user_input + '.txt"'
 
     w = csv.writer(response, delimiter=" ".encode('utf-8'))
     w.writerow(['id', 'calibrated_magnitude', 'calibrated_error', 'magnitude_rms_error', 'x', 'y', 'alpha_j2000',
                 'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter', 'original_filter',
                 'date', 'user_id', 'device_id', 'target'])
 
-    stars = Photometry.objects.raw(
-        "SELECT * FROM photometry AS t1, observations AS t2  WHERE t1.observation_id = t2.id AND "
-        "cal_offset(%s, alpha_j2000, %s, delta_j2000) < 2 AND alpha_j2000 BETWEEN %s-5/3600 AND %s+5/3600 "
-        "AND delta_j2000 BETWEEN %s-5/3600 AND  %s+5/3600",
-        [ra, dec, ra, ra, dec, dec])
     for star in stars:
         w.writerow([star.id, star.calibrated_magnitude, star.calibrated_error, star.magnitude_rms_error, star.x,
                     star.y, star.alpha_j2000, star.delta_j2000, star.fwhm_world, star.flags, star.magnitude,
