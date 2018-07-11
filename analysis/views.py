@@ -1145,7 +1145,7 @@ def lightcurve(request):
             lightcurve_data['stars'] = []
             lightcurve_data['filters'] = []
             for star in stars:
-                if star.observation.orignal_filter in settings.HA_FILTERS:
+                if star.observation.orignal_filter.upper() in settings.HA_FILTERS:
                     lightcurve_data['stars'].append({'date': star.observation.date,
                                                     'calibrated_magnitude': star.calibrated_magnitude,
                                                     'alpha_j2000': star.alpha_j2000,
