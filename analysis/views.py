@@ -1097,16 +1097,24 @@ def lightcurve(request):
                 # Lookup using name
                 coords = SkyCoord.from_name(form.cleaned_data['user_input'])
             else:
-                # Get the users co-ordinates into astropy SkyCoords so we can manipiulate them easily
-                try:
+                if form.cleaned_data['units']:
+                    # Check the units the user has specified, otherwise just use degrees
+                    if form.cleaned_data['units'] == "HD":
+                        unit1 = u.hour
+                        unit2 = u.degree
+                    else:
+                        unit1 = u.degree
+                        unit2 = u.degree
                     if form.cleaned_data['coordinate_frame']:
-                        coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'])
+                        # If the user gave us a coordinate frame
+                        coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'], unit=(unit1, unit2))
                     else:
                         # Default to fk5
-                        coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5')
-                except ValueError:
+                        coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5', unit=(unit1, unit2))
+                else:
                     if form.cleaned_data['coordinate_frame']:
-                        coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'], unit=u.degree)
+                        coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'],
+                                          unit=u.degree)
                     else:
                         # Default to fk5
                         coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5', unit=u.degree)
@@ -1119,6 +1127,7 @@ def lightcurve(request):
             else:
                 radius = 5
 
+            # Can't divide by 0!
             if coords.dec.degree == 90:
                 dec = 89.99999
             else:
@@ -1155,6 +1164,7 @@ def lightcurve(request):
                                                     'filter': star.observation.filter})
                     lightcurve_data['filters'].append(star.observation.filter)
 
+            # No stars for the coords? Then we can't continue
             if len(lightcurve_data['stars']) == 0:
                     return render(request, "base_lightcurve.html",
                                   {'form': form, 'error': 'No stars found for given co-ordinates'})
@@ -1162,10 +1172,12 @@ def lightcurve(request):
             # Get rid of duplicates
             lightcurve_data['filters'] = list(set(lightcurve_data['filters']))
 
+            # Build up some lists of stars, co-ordinates and magnitudes
             stars_for_filter = sorted(lightcurve_data['stars'], key=itemgetter('calibrated_magnitude'), reverse=True)
             coord_list = SkyCoord(map(itemgetter('alpha_j2000'), stars_for_filter), map(itemgetter('delta_j2000'), stars_for_filter), frame='fk5', unit=u.degree)
             mag_list = numpy.array(map(itemgetter('calibrated_magnitude'), stars_for_filter))
 
+            # Do the indexing
             index_array = numpy.zeros(len(stars_for_filter), dtype=int)
             check_not_indexed = numpy.where(index_array < 0.5)
             while len(check_not_indexed[0]) != 0:
@@ -1184,6 +1196,7 @@ def lightcurve(request):
 
             array_stars = numpy.asarray(lightcurve_data['stars'])
 
+            # Build up the lists of indexed stars
             for i in range(0, len(median_ra)):
                 check_in_index_array = numpy.where(index_array == i + 1)
                 median_ra[i] = numpy.median(coord_list[check_in_index_array[0]].ra.degree)

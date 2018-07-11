@@ -143,3 +143,7 @@ class LightcurveSearchForm(forms.Form):
         ('NAME', 'Name'),
         ('COORD', 'Co-ordinates'),
     ), initial='COORD')
+    units = forms.ChoiceField(label="Units", choices=(
+        ('DD', 'Degrees Degrees'),
+        ('HD', 'Hours Degrees')
+    ), required=False)
