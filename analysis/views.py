@@ -31,6 +31,9 @@ from astropy import units as u
 import numpy
 from operator import itemgetter
 import matplotlib.pyplot as plt
+from scipy.spatial import distance_matrix
+from scipy.cluster.hierarchy import linkage, fcluster
+import scipy.spatial.distance as ssd
 
 @login_required
 def ul(request):
@@ -1148,8 +1151,8 @@ def lightcurve(request):
                 if star.observation.orignal_filter.upper() in settings.HA_FILTERS:
                     lightcurve_data['stars'].append({'date': star.observation.date,
                                                     'calibrated_magnitude': star.calibrated_magnitude,
-                                                    'alpha_j2000': star.alpha_j2000,
-                                                    'delta_j2000': star.delta_j2000,
+                                                    'alpha_j2000': float(star.alpha_j2000),
+                                                    'delta_j2000': float(star.delta_j2000),
                                                     'calibrated_error': star.calibrated_error,
                                                     'id': star.id,
                                                     'filter': 'HA'})
@@ -1157,8 +1160,8 @@ def lightcurve(request):
                 else:
                     lightcurve_data['stars'].append({'date': star.observation.date,
                                                     'calibrated_magnitude': star.calibrated_magnitude,
-                                                    'alpha_j2000': star.alpha_j2000,
-                                                    'delta_j2000': star.delta_j2000,
+                                                    'alpha_j2000': float(star.alpha_j2000),
+                                                    'delta_j2000': float(star.delta_j2000),
                                                     'calibrated_error': star.calibrated_error,
                                                     'id': star.id,
                                                     'filter': star.observation.filter})
@@ -1174,22 +1177,34 @@ def lightcurve(request):
 
             # Build up some lists of stars, co-ordinates and magnitudes
             stars_for_filter = sorted(lightcurve_data['stars'], key=itemgetter('calibrated_magnitude'), reverse=True)
-            coord_list = SkyCoord(map(itemgetter('alpha_j2000'), stars_for_filter), map(itemgetter('delta_j2000'), stars_for_filter), frame='fk5', unit=u.degree)
+            coord_list = numpy.array([map(itemgetter('alpha_j2000'), stars_for_filter), map(itemgetter('delta_j2000'), stars_for_filter)])
             mag_list = numpy.array(map(itemgetter('calibrated_magnitude'), stars_for_filter))
 
-            # Do the indexing
-            index_array = numpy.zeros(len(stars_for_filter), dtype=int)
-            check_not_indexed = numpy.where(index_array < 0.5)
-            while len(check_not_indexed[0]) != 0:
-                coord_1 = coord_list[check_not_indexed[0][0]]
-                d2d = coord_1.separation(coord_list)
-                check_samesource = numpy.where(d2d.arcsec < 10)
-                index_array[check_samesource[0]] = numpy.max(index_array) + 1
-                check_not_indexed = numpy.where(index_array < 0.5)
+            sep = distance_matrix(numpy.transpose(coord_list), numpy.transpose(coord_list))
 
-            median_ra = numpy.zeros(int(numpy.max(index_array)), dtype=float)
-            median_dec = numpy.zeros(int(numpy.max(index_array)), dtype=float)
-            median_mag = numpy.zeros(int(numpy.max(index_array)), dtype=float)
+            square = ssd.squareform(sep * 3600.)
+
+            linkage_of_square = linkage(square, 'single')
+
+            clusters = fcluster(linkage_of_square, 3, criterion='distance')
+
+            # Do the indexing
+            #index_array = numpy.zeros(len(stars_for_filter), dtype=int)
+            #check_not_indexed = numpy.where(index_array < 0.5)
+            #while len(check_not_indexed[0]) != 0:
+            #    coord_1 = coord_list[check_not_indexed[0][0]]
+            #    d2d = coord_1.separation(coord_list)
+            #    check_samesource = numpy.where(d2d.arcsec < 10)
+            #    index_array[check_samesource[0]] = numpy.max(index_array) + 1
+            #    check_not_indexed = numpy.where(index_array < 0.5)
+
+            median_ra = numpy.zeros(int(numpy.max(clusters)), dtype=float)
+            median_dec = numpy.zeros(int(numpy.max(clusters)), dtype=float)
+            median_mag = numpy.zeros(int(numpy.max(clusters)), dtype=float)
+
+            print clusters
+
+            print coord_list
 
             lightcurve_data['seperated'] = {}
             lightcurve_data['medianmag'] = {}
@@ -1198,9 +1213,9 @@ def lightcurve(request):
 
             # Build up the lists of indexed stars
             for i in range(0, len(median_ra)):
-                check_in_index_array = numpy.where(index_array == i + 1)
-                median_ra[i] = numpy.median(coord_list[check_in_index_array[0]].ra.degree)
-                median_dec[i] = numpy.median(coord_list[check_in_index_array[0]].dec.degree)
+                check_in_index_array = numpy.where(clusters == i + 1)
+                median_ra[i] = numpy.median(coord_list[0][check_in_index_array[0]])
+                median_dec[i] = numpy.median(coord_list[1][check_in_index_array[0]])
                 median_mag[i] = numpy.min(mag_list[check_in_index_array[0]])
                 key = str(median_ra[i]) + " " + str(median_dec[i])
                 lightcurve_data['seperated'][key] = []
@@ -1211,13 +1226,6 @@ def lightcurve(request):
             user_choices = lightcurve_data['seperated'].keys()
 
             request.session['lightcurve_data'] = lightcurve_data
-
-            # MedFilter line plot
-            #plt.scatter(map(itemgetter('alpha_j2000'), stars_for_filter), map(itemgetter('delta_j2000'), stars_for_filter))
-            #plt.scatter(median_ra, median_dec, s=(18-median_mag)*10, c='red', marker='o')
-
-            #plt.savefig('/tmp/test.png', format='png')
-            #plt.clf()
 
             return render(request, "base_lightcurve_stars.html", {'user_choices': user_choices})
 
