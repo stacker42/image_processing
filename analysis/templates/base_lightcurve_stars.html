@@ -4,17 +4,27 @@
 
 {% block content %}
 
-    <h1>Lightcurve Plot - Choose a star</h1>
+    {% load get %}
 
-    <p>The following stars have been detected based on the co-ordinates that you entered ({{ ra }}, {{ dec }}).</p>
+    <h1>Lightcurve Plot - Choose a star</h1>
 
     <table class="table table-striped">
         <tr>
             <th>HOYS-CAPS Name</th>
+            <th>Number of Stars</th>
+            <th>Median Magnitudes</th>
         </tr>
         {% for choice in user_choices %}
             <tr>
                 <td><a href="{% url 'lightcurve' %}?plot=1&choice={{ choice }}">{{ choice }}</a></td>
+                <td>{{ lightcurve_data.count|get:choice }}</td>
+                <td>
+                    {% with data=lightcurve_data.median_mag_filters|get:choice %}
+                        {% for k, v in data.items %}
+                            <b>{{ k }}:</b> {{ v }}
+                        {% endfor %}
+                    {% endwith %}
+                </td>
             </tr>
         {% endfor %}
     </table>

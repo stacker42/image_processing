@@ -1136,98 +1136,13 @@ def lightcurve(request):
             else:
                 dec = coords.dec.degree
 
-            # Get all stars within radius
-            stars = Photometry.objects.raw("SELECT * FROM photometry WHERE alpha_j2000 BETWEEN %s-(%s/3600 / COS(%s * PI() / 180)) AND "
-                                           "%s+(%s/3600 / COS(%s * PI() / 180)) AND delta_j2000 BETWEEN %s-%s/3600 AND %s+%s/3600;",
-                                           [coords.ra.degree, radius, dec, coords.ra.degree, radius, dec, dec,
-                                            radius, dec, radius])
-
             request.session['lightcurve_data'] = {}
-            lightcurve_data = {}
 
-            lightcurve_data['stars'] = []
-            lightcurve_data['filters'] = []
-            for star in stars:
-                if star.observation.orignal_filter.upper() in settings.HA_FILTERS:
-                    lightcurve_data['stars'].append({'date': star.observation.date,
-                                                    'calibrated_magnitude': star.calibrated_magnitude,
-                                                    'alpha_j2000': float(star.alpha_j2000),
-                                                    'delta_j2000': float(star.delta_j2000),
-                                                    'calibrated_error': star.calibrated_error,
-                                                    'id': star.id,
-                                                    'filter': 'HA'})
-                    lightcurve_data['filters'].append('HA')
-                else:
-                    lightcurve_data['stars'].append({'date': star.observation.date,
-                                                    'calibrated_magnitude': star.calibrated_magnitude,
-                                                    'alpha_j2000': float(star.alpha_j2000),
-                                                    'delta_j2000': float(star.delta_j2000),
-                                                    'calibrated_error': star.calibrated_error,
-                                                    'id': star.id,
-                                                    'filter': star.observation.filter})
-                    lightcurve_data['filters'].append(star.observation.filter)
-
-            # No stars for the coords? Then we can't continue
-            if len(lightcurve_data['stars']) == 0:
-                    return render(request, "base_lightcurve.html",
-                                  {'form': form, 'error': 'No stars found for given co-ordinates'})
-
-            # Get rid of duplicates
-            lightcurve_data['filters'] = list(set(lightcurve_data['filters']))
-
-            # Build up some lists of stars, co-ordinates and magnitudes
-            stars_for_filter = sorted(lightcurve_data['stars'], key=itemgetter('calibrated_magnitude'), reverse=True)
-            coord_list = numpy.array([map(itemgetter('alpha_j2000'), stars_for_filter), map(itemgetter('delta_j2000'), stars_for_filter)])
-            mag_list = numpy.array(map(itemgetter('calibrated_magnitude'), stars_for_filter))
-
-            sep = distance_matrix(numpy.transpose(coord_list), numpy.transpose(coord_list))
-
-            square = ssd.squareform(sep * 3600.)
-
-            linkage_of_square = linkage(square, 'single')
-
-            clusters = fcluster(linkage_of_square, 3, criterion='distance')
-
-            # Do the indexing
-            #index_array = numpy.zeros(len(stars_for_filter), dtype=int)
-            #check_not_indexed = numpy.where(index_array < 0.5)
-            #while len(check_not_indexed[0]) != 0:
-            #    coord_1 = coord_list[check_not_indexed[0][0]]
-            #    d2d = coord_1.separation(coord_list)
-            #    check_samesource = numpy.where(d2d.arcsec < 10)
-            #    index_array[check_samesource[0]] = numpy.max(index_array) + 1
-            #    check_not_indexed = numpy.where(index_array < 0.5)
-
-            median_ra = numpy.zeros(int(numpy.max(clusters)), dtype=float)
-            median_dec = numpy.zeros(int(numpy.max(clusters)), dtype=float)
-            median_mag = numpy.zeros(int(numpy.max(clusters)), dtype=float)
-
-            print clusters
-
-            print coord_list
-
-            lightcurve_data['seperated'] = {}
-            lightcurve_data['medianmag'] = {}
-
-            array_stars = numpy.asarray(lightcurve_data['stars'])
-
-            # Build up the lists of indexed stars
-            for i in range(0, len(median_ra)):
-                check_in_index_array = numpy.where(clusters == i + 1)
-                median_ra[i] = numpy.median(coord_list[0][check_in_index_array[0]])
-                median_dec[i] = numpy.median(coord_list[1][check_in_index_array[0]])
-                median_mag[i] = numpy.min(mag_list[check_in_index_array[0]])
-                key = str(median_ra[i]) + " " + str(median_dec[i])
-                lightcurve_data['seperated'][key] = []
-
-                lightcurve_data['seperated'][key] = array_stars[check_in_index_array[0]]
-                lightcurve_data['medianmag'][key] = median_mag[i]
-
-            user_choices = lightcurve_data['seperated'].keys()
+            lightcurve_data, user_choices = lc.index_stars(coords, radius, dec, request, form)
 
             request.session['lightcurve_data'] = lightcurve_data
 
-            return render(request, "base_lightcurve_stars.html", {'user_choices': user_choices})
+            return render(request, "base_lightcurve_stars.html", {'user_choices': user_choices, 'lightcurve_data': lightcurve_data})
 
     elif is_plot == '1':
         # User has chosen a star, now we will produce a plot
@@ -1325,20 +1240,28 @@ def lightcurve_download(request):
     input_type = request.GET.get('input_type')
     coordinate_frame = request.GET.get('coordinate_frame')
     radius = request.GET.get('radius')
+    units = request.GET.get('units')
 
     if input_type == "NAME":
         # Lookup using name
         coords = SkyCoord.from_name(user_input)
     else:
-        # Get the users co-ordinates into astropy SkyCoords so we can manipiulate them easily
-        try:
+        if units:
+            # Check the units the user has specified, otherwise just use degrees
+            if units == "HD":
+                unit1 = u.hour
+                unit2 = u.degree
+            else:
+                unit1 = u.degree
+                unit2 = u.degree
             if coordinate_frame:
-                coords = SkyCoord(user_input, frame=coordinate_frame)
+                # If the user gave us a coordinate frame
+                coords = SkyCoord(user_input, frame=coordinate_frame,
+                                  unit=(unit1, unit2))
             else:
                 # Default to fk5
-                coords = SkyCoord(user_input, frame='fk5')
-        except ValueError:
-            print "valerror"
+                coords = SkyCoord(user_input, frame='fk5', unit=(unit1, unit2))
+        else:
             if coordinate_frame:
                 coords = SkyCoord(user_input, frame=coordinate_frame,
                                   unit=u.degree)
@@ -1359,12 +1282,7 @@ def lightcurve_download(request):
     else:
         dec = coords.dec.degree
 
-    # Get all stars within radius
-    stars = Photometry.objects.raw(
-        "SELECT * FROM photometry WHERE alpha_j2000 BETWEEN %s-(%s/3600 / COS(%s * PI() / 180)) AND "
-        "%s+(%s/3600 / COS(%s * PI() / 180)) AND delta_j2000 BETWEEN %s-%s/3600 AND %s+%s/3600;",
-        [coords.ra.degree, radius, dec, coords.ra.degree, radius, dec, dec,
-         radius, dec, radius])
+    lightcurve_data, user_choices = lc.index_stars(coords, radius, dec, request)
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="lightcurve_' + user_input + '.txt"'
@@ -1374,10 +1292,11 @@ def lightcurve_download(request):
                 'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter', 'original_filter',
                 'date', 'user_id', 'device_id', 'target'])
 
-    for star in stars:
-        w.writerow([star.id, star.calibrated_magnitude, star.calibrated_error, star.magnitude_rms_error, star.x,
-                    star.y, star.alpha_j2000, star.delta_j2000, star.fwhm_world, star.flags, star.magnitude,
-                    star.observation_id, star.observation.filter, star.observation.orignal_filter,
-                    star.observation.date, star.observation.user_id, star.observation.device_id, star.observation.target])
+    for cluster in lightcurve_data['seperated']:
+        for star in lightcurve_data['seperated'][cluster]:
+            w.writerow([star['id'], star['calibrated_magnitude'], star['calibrated_error'], star['magnitude_rms_error'], star['x'],
+                    star['y'], star['alpha_j2000'], star['delta_j2000'], star['fwhm_world'], star['flags'], star['magnitude'],
+                    star['observation_id'], star['filter'], star['original_filter'],
+                    star['date'], star['user_id'], star['device_id'], star['target']])
 
     return response
