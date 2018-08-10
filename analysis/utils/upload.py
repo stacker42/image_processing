@@ -20,7 +20,7 @@ def check_valid_file(path, uuid):
     try:
         get_header(path)
         return True
-    except IOError:
+    except (IOError, ValueError):
         handle_deleted_file(uuid)
         return False
 

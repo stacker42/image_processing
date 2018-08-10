@@ -307,7 +307,7 @@ def process_metadata(request, file_id):
     hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid),
                                              fits_file.fits_filename))
 
-    header_text = repr(hdulist[0].header)
+    header_text = repr(hdulist[0].header).encode('utf-8')
 
     observation = Observation.objects.get(fits=fits_file)
     device = observation.device

@@ -77,16 +77,17 @@ def do_astrometry(path, file_id):
     elif sign == "-":
         mult = -1.0
     else:
-        print "Something went wrong!"
+        pass
     # work out the RA/DEC values
     rac = 15.0 * (ra1 + ra2 / 60.0 + ra3 / 3600.0)
     decc = mult * (mult * de1 + de2 / 60.0 + de3 / 3600.0)
-    print rac, decc
+
     inhdulist[0].header['CRVAL1'] = (rac, 'RA  of reference point')
     inhdulist[0].header['CRVAL2'] = (decc, 'DEC of reference point')
 
     try:
-        fits.writeto(os.path.join(WORKING_DIRECTORY, 'in.fits'), inhdulist[0].data, inhdulist[0].header)
+        fits.writeto(os.path.join(WORKING_DIRECTORY, 'in.fits'), inhdulist[0].data, inhdulist[0].header,
+                     output_verify='ignore')
     except IOError:
         # This means that the astrometry crashed in the past, but the file exists here. We'll just continue as normal
         pass
@@ -96,7 +97,10 @@ def do_astrometry(path, file_id):
     solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '2',
                      '--overwrite']
 
-    subprocess.check_output(solve_command)
+    try:
+        subprocess.check_output(solve_command)
+    except subprocess.CalledProcessError:
+        return False
 
     try:
         # Move our solved image to the location of the exiting image
@@ -108,7 +112,10 @@ def do_astrometry(path, file_id):
     # Make a JPEG that we can show the user in their browser
     imagemagick_command = ['convert', 'in-objs.png', '-resize', '40%', 'in-objs.jpg']
 
-    subprocess.check_output(imagemagick_command)
+    try:
+        subprocess.check_output(imagemagick_command)
+    except subprocess.CalledProcessError:
+        return False
 
     # Change back to our Django base directory as we're going to delete this one soon
     os.chdir(settings.BASE_DIR)
