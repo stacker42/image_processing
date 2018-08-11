@@ -95,7 +95,7 @@ def do_astrometry(path, file_id):
     # Actually solve the image using the astrometry.net solve-field command
     # We downsample and guess field to try and speed things up a bit. Don't go lower than 2 - causes problems
     solve_command = [settings.ASTROMETRY_BINARY_PATH + 'solve-field', 'in.fits', '--guess-scale', '--downsample', '2',
-                     '--overwrite', '--ra', '' + str(ra) + '', '--dec', '' + str(decc) + '', '--radius', '5', '--cpulimit', '150']
+                     '--overwrite', '--cpulimit', '600']
 
     try:
         subprocess.check_output(solve_command)
