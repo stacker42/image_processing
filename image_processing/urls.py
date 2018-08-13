@@ -55,4 +55,5 @@ urlpatterns = [
     url(r'lightcurve/download/$', views.lightcurve_download, name='lightcurve_download'),
 
     url(r'^captcha/', include('captcha.urls')),
+    url(r'^hijack/', include('hijack.urls', namespace='hijack')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.ASTROMETRY_URL, document_root='temporary/astrometry/') + static(settings.PLOTS_URL, document_root='data/plots')
