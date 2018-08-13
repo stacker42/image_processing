@@ -25,7 +25,7 @@ class ImagingDevice(models.Model):
 
     # What to show the user when viewing the object in a queryset
     def __str__(self):
-        return self.name
+        return "[" + self.user.username + "]" + self.name
 
 
 class Object(models.Model):
