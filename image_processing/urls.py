@@ -37,6 +37,7 @@ urlpatterns = [
     url(r'^process/calibration/retry/(?P<file_id>[0-9]+)/$', views.process_calibration_retry,
         name='process_calibration_retry'),
     url(r'^process/reprocess/(?P<file_id>[0-9]+)/$', views.process_reprocess, name='process_reprocess'),
+    url(r'^process/reprocess-photometry/(?P<file_id>[0-9]+)/$', views.process_reprocess_photometry, name='process_reprocess_photometry'),
     url(r'^add/object/$', views.add_object, name='add_object'),
     url(r'^add/device/$', views.add_device, name='add_device'),
     url(r'^modify/object/(?P<id>[0-9]+)$', views.modify_object, name='modify_object'),

@@ -678,6 +678,37 @@ def process_reprocess(request, file_id):
         raise PermissionDenied
 
 
+@csrf_exempt
+@login_required
+def process_reprocess_photometry(request, file_id):
+    """
+    Allow a user to re-process a file from the astrometry stage
+    :param request:
+    :param file_id: The ID of the file to reprocess
+    :return:
+    """
+    fits_file = get_object_or_404(FITSFile, pk=file_id)
+
+    if (request.user != fits_file.uploaded_by) and (not request.user.is_staff):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        try:
+            observation = Observation.objects.get(fits=fits_file)
+            TemporaryPhotometry.objects.filter(observation=observation).delete()
+            Photometry.objects.filter(observation=observation).delete()
+        except ObjectDoesNotExist:
+            pass  # We don't care if they don't exist, we're deleting them anyway
+
+        fits_file.process_status = 'ASTROMETRY'
+
+        fits_file.save()
+
+        return redirect('process')
+    else:
+        raise PermissionDenied
+
+
 @login_required
 @permission_required('is_staff', raise_exception=True)  # Only let staff users add objects
 def add_object(request):
@@ -1176,11 +1207,11 @@ def lightcurve(request):
                 traces.append(
                     Scatter(
                         # Need to except KeyError and go onto the next filter here
-                        x=[star['date'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f],
-                        y=[star['calibrated_magnitude'] + Decimal(offset) for star in lightcurve_data['seperated'][choice] if star['filter'] == f],
+                        x=[star['date'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['flags'] != -99],
+                        y=[star['calibrated_magnitude'] + Decimal(offset) for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['flags'] != -99],
                         error_y=dict(
                             type='data',
-                            array=[star['calibrated_error'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f],
+                            array=[star['calibrated_error'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['flags'] != -99],
                             visible=errorbars,
                             color=colours[f],
                         ),
@@ -1290,13 +1321,23 @@ def lightcurve_download(request):
     w = csv.writer(response, delimiter=" ".encode('utf-8'))
     w.writerow(['id', 'calibrated_magnitude', 'calibrated_error', 'magnitude_rms_error', 'x', 'y', 'alpha_j2000',
                 'delta_j2000', 'fwhm_world', 'flags', 'magnitude', 'observation_id', 'filter', 'original_filter',
-                'date', 'user_id', 'device_id', 'target'])
+                'date', 'user_id', 'device_id', 'target', 'fits_id'])
 
     for cluster in lightcurve_data['seperated']:
         for star in lightcurve_data['seperated'][cluster]:
             w.writerow([star['id'], star['calibrated_magnitude'], star['calibrated_error'], star['magnitude_rms_error'], star['x'],
                     star['y'], star['alpha_j2000'], star['delta_j2000'], star['fwhm_world'], star['flags'], star['magnitude'],
                     star['observation_id'], star['filter'], star['original_filter'],
-                    star['date'], star['user_id'], star['device_id'], star['target']])
+                    star['date'], star['user_id'], star['device_id'], star['target'], star['fits_id']])
 
     return response
+
+
+def stats(request):
+    """
+    Statistics page showing information about uploads and data on this server
+    :param request:
+    :return:
+    """
+    #Photometry.objects.count()
+    pass

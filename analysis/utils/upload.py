@@ -72,17 +72,17 @@ def handle_upload(f, fileattrs, request):
     """
     Handle a chunked or non-chunked upload. Add information about the unprocessed upload to the database.
     """
-
+    fn = ''.join(fileattrs['qqfilename'].split())
     chunked = False
     dest_folder = os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'])
-    dest = os.path.join(dest_folder, fileattrs['qqfilename'])
+    dest = os.path.join(dest_folder, fn)
 
     # Chunked
     # Only chunks are saved here
     if fileattrs.get('qqtotalparts') and int(fileattrs['qqtotalparts']) > 1:
         chunked = True
         dest_folder = os.path.join(settings.CHUNKS_DIRECTORY, fileattrs['qquuid'])
-        dest = os.path.join(dest_folder, fileattrs['qqfilename'], str(fileattrs['qqpartindex']))
+        dest = os.path.join(dest_folder, fn, str(fileattrs['qqpartindex']))
     # Will save whole upload if not chunked, or just the chunk
 
     if not chunked:
@@ -91,7 +91,7 @@ def handle_upload(f, fileattrs, request):
         if check_valid_file(dest, fileattrs['qquuid']):
             upload = FITSFile()
             upload.uuid = fileattrs['qquuid']
-            upload.fits_filename = fileattrs['qqfilename']
+            upload.fits_filename = fn
             upload.uploaded_by = request.user
             upload.upload_time = time.time()
             upload.sha256 = hashlib.sha256(open(dest, 'r').read()).hexdigest()
@@ -110,16 +110,16 @@ def handle_upload(f, fileattrs, request):
         if combine_chunks(fileattrs['qqtotalparts'],
                           fileattrs['qqtotalfilesize'],
                           source_folder=os.path.dirname(dest),
-                          dest=os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']),
+                          dest=os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fn),
                           uuid=fileattrs['qquuid']):
             # save to db
             upload = FITSFile()
             upload.uuid = fileattrs['qquuid']
-            upload.fits_filename = fileattrs['qqfilename']
+            upload.fits_filename = fn
             upload.uploaded_by = request.user
             upload.upload_time = time.time()
             upload.sha256 = hashlib.sha256(
-                open(os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fileattrs['qqfilename']),
+                open(os.path.join(settings.UPLOAD_DIRECTORY, fileattrs['qquuid'], fn),
                      'r').read()).hexdigest()
             upload.process_status = 'UPLOADED'
             upload.save()

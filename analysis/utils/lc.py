@@ -51,7 +51,8 @@ def index_stars(coords, radius, dec, request, form=LightcurveSearchForm()):
                                              'target': star.observation.target,
                                              'flags': star.flags,
                                              'magnitude': star.magnitude,
-                                             'device_id': star.observation.device_id})
+                                             'device_id': star.observation.device_id,
+                                             'fits_id': star.observation.fits.id})
             lightcurve_data['filters'].append('HA')
         else:
             lightcurve_data['stars'].append({'date': star.observation.date,
@@ -71,7 +72,8 @@ def index_stars(coords, radius, dec, request, form=LightcurveSearchForm()):
                                              'target': star.observation.target,
                                              'flags': star.flags,
                                              'magnitude': star.magnitude,
-                                             'device_id': star.observation.device_id})
+                                             'device_id': star.observation.device_id,
+                                             'fits_id': star.observation.fits.id})
             lightcurve_data['filters'].append(star.observation.filter)
 
     # No stars for the coords? Then we can't continue

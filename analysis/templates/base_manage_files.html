@@ -27,6 +27,7 @@
             <th>Uploaded Time <a href="{% query_transform request sortby='time' %}">&uarr;</a> <a
                     href="{% query_transform request sortby='time_rev' %}">&darr;</a></th>
             <th>Action</th>
+            <th>Photometry Image</th>
         </tr>
         {% for file in files %}
             <tr>
@@ -36,9 +37,14 @@
                 <td>{{ file.upload_time|timestamp_to_human }}</td>
                 <td>
                     <a href="javascript:reprocessConfirm('{% url 'process_reprocess' file.id %}','{{ file.fits_filename }}');"
-                       class="btn btn-danger">Reprocess</a><a
+                       class="btn btn-danger">Reprocess</a>
+                    <a href="javascript:reprocessPhotometryConfirm('{% url 'process_reprocess_photometry' file.id %}','{{ file.fits_filename }}');"
+                       class="btn btn-danger">Reprocess Photometry</a><a
                         href="javascript:delConfirm('{% url 'delete_file' file.id %}','{{ file.fits_filename }}');"
-                        class="btn btn-danger">Delete</a></td>
+                        class="btn btn-danger">Delete</a>
+                </td>
+                <td><a href="{{ PLOTS_URL }}/{{ file.fits_filename }}.png?invalidate-cache={% now 'U' %}" target="_blank"><img src="{{ PLOTS_URL }}/{{ file.fits_filename }}.png?invalidate-cache={% now 'U' %}" width="50px"></a></td>
+
             </tr>
         {% endfor %}
     </table>
@@ -84,6 +90,13 @@
 
         function reprocessConfirm(url, filename) {
             if (confirm('You are about to reprocess ' + filename + ', are you sure?')) {
+                $.post(url);
+                location.reload();
+            }
+        }
+
+        function reprocessPhotometryConfirm(url, filename) {
+            if (confirm('You are about to reprocess photometry for ' + filename + ', are you sure?')) {
                 $.post(url);
                 location.reload();
             }

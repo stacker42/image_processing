@@ -49,6 +49,8 @@ def process_metadata_db(inhdulist, fits_file, request):
     filename = str(fits_file.id) + '_' + str(request.user.id) + '_' + str(observation.device.id) + '_' + \
                observation.target.name + '_' + observation.orignal_filter + '_' + str(observation.date) + '.fits'
 
+    filename = ''.join(filename.split())
+
     shutil.move(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename),
                 os.path.join(settings.FITS_DIRECTORY, filename))
     # Delete the old temporary directory for this file
