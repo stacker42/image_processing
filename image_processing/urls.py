@@ -23,7 +23,7 @@ from django.contrib.auth.views import password_reset_confirm, password_reset_com
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^$', views.lightcurve, name="home"),
+    url(r'^$', views.stats, name="home"),
     url(r'^ul/$', views.ul, name="ul"),
     url(r'^process/$', views.process, name="process"),
     url(r'^process/metadata/(?P<file_id>[0-9]+)/$', views.process_metadata, name="process-metadata"),
@@ -54,6 +54,8 @@ urlpatterns = [
 
     url(r'lightcurve/$', views.lightcurve, name='lightcurve'),
     url(r'lightcurve/download/$', views.lightcurve_download, name='lightcurve_download'),
+
+    url(r'stats/$', views.stats, name='stats'),
 
     url(r'^captcha/', include('captcha.urls')),
     url(r'^hijack/', include('hijack.urls', namespace='hijack')),

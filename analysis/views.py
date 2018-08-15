@@ -11,7 +11,6 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db import connection
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
@@ -24,16 +23,12 @@ from models import *
 from utils import fits, upload, astrometry, photometry, calibration, general, lc
 
 from plotly.offline import plot
-from plotly.graph_objs import Scatter
+import plotly.graph_objs as go
 import csv
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-import numpy
-from operator import itemgetter
-import matplotlib.pyplot as plt
-from scipy.spatial import distance_matrix
-from scipy.cluster.hierarchy import linkage, fcluster
-import scipy.spatial.distance as ssd
+from django.db.models import Sum
+import itertools
 
 @login_required
 def ul(request):
@@ -1205,7 +1200,7 @@ def lightcurve(request):
                         filters_and_offsets[f] = offset
 
                 traces.append(
-                    Scatter(
+                    go.Scatter(
                         # Need to except KeyError and go onto the next filter here
                         x=[star['date'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['flags'] != -99],
                         y=[star['calibrated_magnitude'] + Decimal(offset) for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['flags'] != -99],
@@ -1339,5 +1334,101 @@ def stats(request):
     :param request:
     :return:
     """
-    #Photometry.objects.count()
-    pass
+    # Number of observations for each object per filter
+    # exposure times per object per filter
+    #
+    objs = Object.objects.all()
+    filters = ['CV', 'U', 'B', 'I', 'R', 'SZ', 'V']
+    traces_objcount = []
+    traces_exptimes = []
+    colours = {'R': 'rgba(255, 0, 0, 1)', 'V': 'rgba(0, 255, 0, 1)', 'B': 'rgba(0, 0, 255, 1)',
+               'U': 'rgb(191, 0, 255)', 'I': 'rgba(0, 0, 0, 1)', 'SZ': 'rgb(255, 250, 0)', 'CV': 'rgb(250, 0, 255)',
+               'HA': 'rgb(255, 0, 229)'}
+
+    for filt in filters:
+        x = []
+        y_objcount = []
+        y_exptimes = []
+        for obj in objs:
+            x.append(obj.name)
+            y_objcount.append(Observation.objects.filter(target=obj, filter=filt).count())
+            # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
+            y_exptimes.append(Observation.objects.filter(target=obj, filter=filt).aggregate(Sum('exptime'))['exptime__sum'])
+        traces_objcount.append(
+            go.Bar(
+                x=x,
+                y=y_objcount,
+                name=filt,
+                marker=dict(
+                    color=colours[filt]
+                )
+            )
+        )
+        traces_exptimes.append(
+            go.Bar(
+                x=x,
+                y=y_exptimes,
+                name=filt,
+                marker=dict(
+                    color=colours[filt]
+                )
+            )
+        )
+
+
+    users = User.objects.all()
+    x_userid = []
+    y_uploads = []
+    for user in users:
+        x_userid.append(user.id)
+        y_uploads.append(FITSFile.objects.filter(uploaded_by=user).count())
+    trace_uploads = [
+        go.Bar(
+            x=x_userid,
+            y=y_uploads,
+        )
+    ]
+
+    layout_objcount = go.Layout(
+        barmode='group',
+        title='Number of observations',
+        xaxis=dict(
+            title='Object'
+        ),
+        yaxis=dict(
+            title='Observations'
+        )
+    )
+
+    layout_exptimes = go.Layout(
+        barmode='group',
+        title='Cumulative exposure times',
+        xaxis=dict(
+            title='Object'
+        ),
+        yaxis=dict(
+            title='Exposure time (s)'
+        )
+    )
+
+    layout_uploads = go.Layout(
+        barmode='group',
+        title='Uploads',
+        xaxis=dict(
+            title='User ID'
+        ),
+        yaxis=dict(
+            title='Number of uploads',
+            type='log'
+        )
+    )
+
+    fig_objcount = dict(data=traces_objcount, layout=layout_objcount)
+    fig_exptimes = dict(data=traces_exptimes, layout=layout_exptimes)
+    fig_uploads = dict(data=trace_uploads, layout=layout_uploads)
+
+    p_objcount = plot(fig_objcount, output_type='div', show_link=False, config={'modeBarButtonsToRemove': ['sendDataToCloud']})
+    p_exptimes = plot(fig_exptimes, output_type='div', show_link=False, config={'modeBarButtonsToRemove': ['sendDataToCloud']})
+    p_uploads = plot(fig_uploads, output_type='div', show_link=False, config={'modeBarButtonsToRemove': ['sendDataToCloud']})
+
+    return render(request, "base_stats.html", {'p_objcount': p_objcount, 'p_exptimes': p_exptimes, 'p_uploads': p_uploads})

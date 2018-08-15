@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Site statistics{% endblock %}
+
+{% block content %}
+
+    {% load staticfiles %}
+
+    <h1>Site statistics</h1>
+
+    <div class="plot">{{ p_objcount|safe }}</div>
+    <br />
+    <br />
+    <div class="plot">{{ p_exptimes|safe }}</div>
+    <br />
+    <br />
+    <div class="plot">{{ p_uploads|safe }}</div>
+
+
+{% endblock %}
