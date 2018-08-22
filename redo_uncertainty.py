@@ -24,17 +24,22 @@ for o in observations:
 
     phots = Photometry.objects.filter(observation=o)
     param_cal_arrformat = o.calibration_parameters
-
-    param_cal = param_cal_arrformat.split(" ")
-
+    print param_cal_arrformat
+    param_cal = numpy.array(param_cal_arrformat.split(" ")[:-1])
+    print param_cal
+    param_cal = param_cal.astype(numpy.float32)
     fits_file = o.fits
 
-    uncalibrated_magnitudes = phots.filter(flags__lt=10).values_list('uncalibrated_magnitude', flat=True)
+    uncalibrated_magnitudes = phots.filter(flags__lt=10).values_list('magnitude', flat=True)
+    #uncalibrated_magnitudes = uncalibrated_magnitudes.astype(numpy.float32)
     #flag_2 = numpy.array(phots.values_list('flags', flat=True))
     cal_mag = numpy.array(phots.values_list('calibrated_magnitude', flat=True))
+    cal_mag = cal_mag.astype(numpy.float32)
 
     max_use = numpy.max(uncalibrated_magnitudes)
+    max_use = float(max_use)
     min_use = numpy.min(uncalibrated_magnitudes)
+    min_use = float(min_use)
 
     edge_dist = 10
     # the calibration offset to get instrumental into apparent mag
