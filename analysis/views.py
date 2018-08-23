@@ -1352,13 +1352,13 @@ def stats(request):
         for obj in objs:
             x.append(obj.name)
             if filt is 'HA':
-                y_objcount.append(Observation.objects.filter(target=obj, original_filter__in=settings.HA_FILTERS).count())
+                y_objcount.append(Observation.objects.filter(target=obj, orignal_filter__in=settings.HA_FILTERS).count())
                 # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
-                y_exptimes.append(Observation.objects.filter(target=obj, original_filter__in=settings.HA_FILTERS).aggregate(Sum('exptime'))['exptime__sum'])
+                y_exptimes.append(Observation.objects.filter(target=obj, orignal_filter__in=settings.HA_FILTERS).aggregate(Sum('exptime'))['exptime__sum'])
             else:
-                y_objcount.append(Observation.objects.exclude(original_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).count())
+                y_objcount.append(Observation.objects.exclude(orignal_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).count())
                 # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
-                y_exptimes.append(Observation.objects.exclude(original_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).aggregate(Sum('exptime'))['exptime__sum'])
+                y_exptimes.append(Observation.objects.exclude(orignal_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).aggregate(Sum('exptime'))['exptime__sum'])
         traces_objcount.append(
             go.Bar(
                 x=x,
