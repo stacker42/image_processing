@@ -656,8 +656,8 @@ def process_reprocess(request, file_id):
         if not os.path.exists(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid))):
             os.mkdir(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid)))
 
-        # Move the FITS file back to an original temporary directory
-        shutil.move(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
+            # Move the FITS file back to an original temporary directory
+            shutil.move(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
                     os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.original_filename))
 
         fits_file.fits_filename = fits_file.original_filename
@@ -1202,11 +1202,11 @@ def lightcurve(request):
                 traces.append(
                     go.Scatter(
                         # Need to except KeyError and go onto the next filter here
-                        x=[star['date'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['flags'] != -99],
-                        y=[star['calibrated_magnitude'] + Decimal(offset) for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['flags'] != -99],
+                        x=[star['date'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['magnitude'] > 0],
+                        y=[star['calibrated_magnitude'] + Decimal(offset) for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['magnitude'] > 0],
                         error_y=dict(
                             type='data',
-                            array=[star['calibrated_error'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['flags'] != -99],
+                            array=[star['calibrated_error'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['magnitude'] > 0],
                             visible=errorbars,
                             color=colours[f],
                         ),
@@ -1338,7 +1338,7 @@ def stats(request):
     # exposure times per object per filter
     #
     objs = Object.objects.all()
-    filters = ['CV', 'U', 'B', 'I', 'R', 'SZ', 'V']
+    filters = ['U', 'B', 'I', 'V', 'R', 'HA', 'I', 'SZ']
     traces_objcount = []
     traces_exptimes = []
     colours = {'R': 'rgba(255, 0, 0, 1)', 'V': 'rgba(0, 255, 0, 1)', 'B': 'rgba(0, 0, 255, 1)',
@@ -1351,9 +1351,14 @@ def stats(request):
         y_exptimes = []
         for obj in objs:
             x.append(obj.name)
-            y_objcount.append(Observation.objects.filter(target=obj, filter=filt).count())
-            # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
-            y_exptimes.append(Observation.objects.filter(target=obj, filter=filt).aggregate(Sum('exptime'))['exptime__sum'])
+            if filt is 'HA':
+                y_objcount.append(Observation.objects.filter(target=obj, original_filter__in=settings.HA_FILTERS).count())
+                # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
+                y_exptimes.append(Observation.objects.filter(target=obj, original_filter__in=settings.HA_FILTERS).aggregate(Sum('exptime'))['exptime__sum'])
+            else:
+                y_objcount.append(Observation.objects.exclude(original_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).count())
+                # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
+                y_exptimes.append(Observation.objects.exclude(original_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).aggregate(Sum('exptime'))['exptime__sum'])
         traces_objcount.append(
             go.Bar(
                 x=x,
@@ -1396,7 +1401,8 @@ def stats(request):
             title='Object'
         ),
         yaxis=dict(
-            title='Observations'
+            title='Observations',
+            type='log'
         )
     )
 
@@ -1407,7 +1413,8 @@ def stats(request):
             title='Object'
         ),
         yaxis=dict(
-            title='Exposure time (s)'
+            title='Exposure time (s)',
+            type='log'
         )
     )
 
