@@ -660,7 +660,8 @@ def process_reprocess(request, file_id):
             shutil.move(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
                     os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.original_filename))
 
-        fits_file.fits_filename = fits_file.original_filename
+        if fits_file.original_filename != '' and fits_file.original_filename is not None and fits_file.original_filename != ' ':
+            fits_file.fits_filename = fits_file.original_filename
 
         general.delete_folders(fits_file)
 
