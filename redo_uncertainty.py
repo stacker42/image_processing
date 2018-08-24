@@ -196,6 +196,10 @@ for o in observations:
     else:
         check = numpy.where((match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET) & (flag_m < 10) & (match_flag < 10))
 
+    min_use = numpy.min(match_mag[check[0]])
+
+    max_use = numpy.max(match_mag[check[0]])
+
     cal_mag = fitfunc_cal(param_cal, match_mag[:])
     diff_mag = mag_m[check[0]] - cal_mag[check[0]]
 
@@ -229,9 +233,7 @@ for o in observations:
     for u in db_uncertainties:
         print u[0]
 
-
     print "####################################################"
-
 
     for i in check_flag_error[0]:
         # Get all stars within 1 magnitude of the star we are looking at
