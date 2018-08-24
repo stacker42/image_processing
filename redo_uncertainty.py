@@ -18,7 +18,7 @@ from astropy.coordinates import SkyCoord, match_coordinates_sky
 SKIP_ROWS_IN_CAT = 9  # number of rows to skip in photometry tables
 POS_OFFSET = 3  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
 
-observations = Observation.objects.all()
+observations = Observation.objects.filter(pk=6091)
 
 for o in observations:
 
@@ -30,17 +30,22 @@ for o in observations:
     param_cal = param_cal.astype(numpy.float32)
     fits_file = o.fits
 
-    uncalibrated_magnitudes = phots.filter(flags__lt=10).values_list('magnitude', flat=True)
+    uncalibrated_magnitudes = phots.filter(flags=0.0).values_list('magnitude', flat=True)
     #uncalibrated_magnitudes = uncalibrated_magnitudes.astype(numpy.float32)
     #flag_2 = numpy.array(phots.values_list('flags', flat=True))
-    cal_mag = numpy.array(phots.values_list('calibrated_magnitude', flat=True))
-    cal_mag = cal_mag.astype(numpy.float32)
+    #cal_mag = numpy.array(phots.values_list('calibrated_magnitude', flat=True))
+    #cal_mag = cal_mag.astype(numpy.float32)
 
     max_use = numpy.max(uncalibrated_magnitudes)
-    max_use = float(max_use)
+    max_use = float(max_use) + 0.000000000001
     min_use = numpy.min(uncalibrated_magnitudes)
-    min_use = float(min_use)
+    min_use = float(min_use) - 0.000000000001
 
+    print max_use
+    print min_use
+
+    max_use = float(14.0)
+    min_use = float(13.0)
     edge_dist = 10
     # the calibration offset to get instrumental into apparent mag
     # needs to be calculated at some stage, start with gettting from db
@@ -191,6 +196,7 @@ for o in observations:
     else:
         check = numpy.where((match_mag > min_use) & (match_mag < max_use) & (match_d2d < POS_OFFSET) & (flag_m < 10) & (match_flag < 10))
 
+    cal_mag = fitfunc_cal(param_cal, match_mag[:])
     diff_mag = mag_m[check[0]] - cal_mag[check[0]]
 
     # fill in the main arrays with the data from the catalogue,
@@ -218,6 +224,14 @@ for o in observations:
 
     # Create array for uncertainties
     uncertainty_stars = numpy.zeros(len(mag_2), dtype=float)
+
+    db_uncertainties = numpy.array(Photometry.objects.filter(observation=o).values_list('calibrated_error'), dtype=numpy.float32)
+    for u in db_uncertainties:
+        print u[0]
+
+
+    print "####################################################"
+
 
     for i in check_flag_error[0]:
         # Get all stars within 1 magnitude of the star we are looking at
