@@ -289,7 +289,7 @@ def process_metadata(request, file_id):
 
             observation.save()
 
-            general.process_metadata_db(inhdulist, fits_file, request)
+            general.process_metadata_db(header, fits_file, request)
 
             observation.save()
             return redirect('process')
