@@ -196,6 +196,7 @@ def process_devicesetup(request, file_id):
 
     hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid),
                                              fits_file.fits_filename))
+    hdulist[0].verify('silentfix')
 
     form = MetadataKeyChoiceForm()
     # Add a NONE key to the header so it presents as one of the choices for users.
@@ -250,6 +251,10 @@ def process_metadata(request, file_id):
             inhdulist = fits.get_hdu_list(
                 os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
 
+            inhdulist[0].verify('silentfix')
+
+            header = inhdulist[0].header
+
             observation = Observation.objects.get(fits=fits_file)
             device = observation.device
 
@@ -258,14 +263,14 @@ def process_metadata(request, file_id):
             observation.filter = request.POST.get('used_filter')
 
             if device.date_format == 'MJD':
-                date = inhdulist[0].header[device.date_card] + 2400000.5
+                date = header[device.date_card] + 2400000.5
             elif device.date_format == 'JD':
-                date = inhdulist[0].header[device.date_card]
+                date = header[device.date_card]
             elif device.date_format == 'DATETIME':
                 date = Time(inhdulist[0].header[device.date_card]).jd
             elif device.date_format == 'DATETIMESEP':
-                time = inhdulist[0].header[device.time_card]
-                date = inhdulist[0].header[device.date_card]
+                time = header[device.time_card]
+                date = header[device.date_card]
                 date = Time(date + "T" + time).jd
 
             # Convert whatever format the date is in the header to Julian and store this
@@ -278,9 +283,9 @@ def process_metadata(request, file_id):
                                                                       "the right date type (JD, MJD, Date & Time etc.) "
                                                                       "for the data in the file?"})
 
-            observation.exptime = inhdulist[0].header[device.exptime_card]
+            observation.exptime = header[device.exptime_card]
 
-            observation.orignal_filter = inhdulist[0].header[device.filter_card]
+            observation.orignal_filter = header[device.filter_card]
 
             observation.save()
 
@@ -302,7 +307,11 @@ def process_metadata(request, file_id):
     hdulist = fits.get_hdu_list(os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid),
                                              fits_file.fits_filename))
 
-    header_text = repr(hdulist[0].header).encode('utf-8')
+    hdulist[0].verify('silentfix')
+
+    header = hdulist[0].header
+
+    header_text = repr(header).encode('utf-8')
 
     observation = Observation.objects.get(fits=fits_file)
     device = observation.device
@@ -311,14 +320,14 @@ def process_metadata(request, file_id):
 
     try:
         # Use date card from the device
-        dateval = str(hdulist[0].header[device.date_card])
+        dateval = str(header[device.date_card])
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
         valid = False
         dateval = ''
     try:
         # Use exposure time card from device
-        exptimeval = str(hdulist[0].header[device.exptime_card])
+        exptimeval = str(header[device.exptime_card])
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
         valid = False
@@ -326,7 +335,7 @@ def process_metadata(request, file_id):
 
     try:
         # Use filter card from device
-        filterval = str(hdulist[0].header[device.filter_card])
+        filterval = str(header[device.filter_card])
     except KeyError:
         # If the user chose NONE for the card, then we'll just put nothing here, and force them to change it
         valid = False
@@ -349,7 +358,7 @@ def process_metadata(request, file_id):
 
     if device.time_card is not None:
         try:
-            timeval = hdulist[0].header[device.time_card]
+            timeval = header[device.time_card]
         except KeyError:
             valid = False
             timeval = ''
@@ -433,9 +442,13 @@ def process_metadata_modify(request, file_id):
             inhdulist = fits.get_hdu_list(
                 os.path.join(settings.UPLOAD_DIRECTORY, str(fits_file.uuid), fits_file.fits_filename))
 
+            inhdulist[0].verify('silentfix')
+
+            header = inhdulist[0].header
+
             observation.save()
 
-            general.process_metadata_db(inhdulist, fits_file, request)
+            general.process_metadata_db(header, fits_file, request)
 
             observation.save()
             return redirect('process')
@@ -1339,7 +1352,7 @@ def stats(request):
     # exposure times per object per filter
     #
     objs = Object.objects.all()
-    filters = ['U', 'B', 'I', 'V', 'R', 'HA', 'I', 'SZ']
+    filters = ['U', 'B', 'V', 'R', 'HA', 'I', 'SZ']
     traces_objcount = []
     traces_exptimes = []
     colours = {'R': 'rgba(255, 0, 0, 1)', 'V': 'rgba(0, 255, 0, 1)', 'B': 'rgba(0, 0, 255, 1)',

@@ -25,7 +25,7 @@ def make_response(status=200, content_type='text/plain', content=None):
     return response
 
 
-def process_metadata_db(inhdulist, fits_file, request):
+def process_metadata_db(fits_header, fits_file, request):
     """
     Actually process the header and put all required information in the database, and move the file to its permanent
     location
@@ -37,7 +37,7 @@ def process_metadata_db(inhdulist, fits_file, request):
     header = {}
 
     # Iterate through all the header values and add these to a dictionary
-    for key, value in zip(inhdulist[0].header.keys(), inhdulist[0].header.values()):
+    for key, value in zip(fits_header.keys(), fits_header.values()):
         # Don't add header cards that we can't read the value of
         if not isinstance(value, fits.card.Undefined):
             header[key] = value
