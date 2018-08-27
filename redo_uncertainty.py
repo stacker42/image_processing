@@ -229,12 +229,6 @@ for o in observations:
     # Create array for uncertainties
     uncertainty_stars = numpy.zeros(len(mag_2), dtype=float)
 
-    db_uncertainties = numpy.array(Photometry.objects.filter(observation=o).values_list('calibrated_error'), dtype=numpy.float32)
-    for u in db_uncertainties:
-        print u[0]
-
-    print "####################################################"
-
     for i in check_flag_error[0]:
         # Get all stars within 1 magnitude of the star we are looking at
         check_within_1mag = numpy.where(
@@ -249,5 +243,8 @@ for o in observations:
 
             uncertainty_stars[i] = rms
 
-            print rms
+            phot = Photometry.objects.filter(observation=o, x=x_2[i], y=y_2[i], fwhm_world=fwhm_2[i], magnitude_rms_error=mage_2[i], flags=flag_2[i])
+
+            if len(phot) > 1 or len(phot) == 0:
+                print len(phot)
 
