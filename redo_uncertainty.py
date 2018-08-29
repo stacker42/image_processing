@@ -18,34 +18,31 @@ from astropy.coordinates import SkyCoord, match_coordinates_sky
 SKIP_ROWS_IN_CAT = 9  # number of rows to skip in photometry tables
 POS_OFFSET = 3  # off-set in arcsec to be considered match (in ra and dec)n ----- change this to 1
 
-observations = Observation.objects.filter(pk=6091)
+observations = Observation.objects.all()
 
 for o in observations:
 
+    if o.id > 5000:
+        continue
+
+    print "Working on observation " + str(o.id) + "..."
+
     phots = Photometry.objects.filter(observation=o)
     param_cal_arrformat = o.calibration_parameters
-    print param_cal_arrformat
     param_cal = numpy.array(param_cal_arrformat.split(" ")[:-1])
-    print param_cal
     param_cal = param_cal.astype(numpy.float32)
     fits_file = o.fits
 
     uncalibrated_magnitudes = phots.filter(flags=0.0).values_list('magnitude', flat=True)
-    #uncalibrated_magnitudes = uncalibrated_magnitudes.astype(numpy.float32)
-    #flag_2 = numpy.array(phots.values_list('flags', flat=True))
-    #cal_mag = numpy.array(phots.values_list('calibrated_magnitude', flat=True))
-    #cal_mag = cal_mag.astype(numpy.float32)
+
+    if len(uncalibrated_magnitudes) == 0:
+        continue
 
     max_use = numpy.max(uncalibrated_magnitudes)
     max_use = float(max_use) + 0.000000000001
     min_use = numpy.min(uncalibrated_magnitudes)
     min_use = float(min_use) - 0.000000000001
 
-    print max_use
-    print min_use
-
-    max_use = float(14.0)
-    min_use = float(13.0)
     edge_dist = 10
     # the calibration offset to get instrumental into apparent mag
     # needs to be calculated at some stage, start with gettting from db
@@ -245,6 +242,8 @@ for o in observations:
 
             phot = Photometry.objects.filter(observation=o, x=x_2[i], y=y_2[i], fwhm_world=fwhm_2[i], magnitude_rms_error=mage_2[i], flags=flag_2[i])
 
-            if len(phot) > 1 or len(phot) == 0:
-                print len(phot)
+            if len(phot) == 1:
+                phot[0].calibrated_error = rms
+                phot[0].save()
 
+    print "Observation " + str(o.id) + " complete"
