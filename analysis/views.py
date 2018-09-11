@@ -1140,27 +1140,35 @@ def lightcurve(request):
                 # Lookup using name
                 coords = SkyCoord.from_name(form.cleaned_data['user_input'])
             else:
-                if form.cleaned_data['units']:
-                    # Check the units the user has specified, otherwise just use degrees
-                    if form.cleaned_data['units'] == "HD":
-                        unit1 = u.hour
-                        unit2 = u.degree
+                try:
+                    if form.cleaned_data['units']:
+                        # Check the units the user has specified, otherwise just use degrees
+                        if form.cleaned_data['units'] == "HD":
+                            unit1 = u.hour
+                            unit2 = u.degree
+                        else:
+                            unit1 = u.degree
+                            unit2 = u.degree
+                        if form.cleaned_data['coordinate_frame']:
+                            # If the user gave us a coordinate frame
+                            coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'], unit=(unit1, unit2))
+                        else:
+                            # Default to fk5
+                            coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5', unit=(unit1, unit2))
                     else:
-                        unit1 = u.degree
-                        unit2 = u.degree
-                    if form.cleaned_data['coordinate_frame']:
-                        # If the user gave us a coordinate frame
-                        coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'], unit=(unit1, unit2))
-                    else:
-                        # Default to fk5
-                        coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5', unit=(unit1, unit2))
-                else:
-                    if form.cleaned_data['coordinate_frame']:
-                        coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'],
+                        if form.cleaned_data['coordinate_frame']:
+                            coords = SkyCoord(form.cleaned_data['user_input'], frame=form.cleaned_data['coordinate_frame'],
                                           unit=u.degree)
-                    else:
-                        # Default to fk5
-                        coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5', unit=u.degree)
+                        else:
+                            # Default to fk5
+                            coords = SkyCoord(form.cleaned_data['user_input'], frame='fk5', unit=u.degree)
+                except ValueError:
+                    form = LightcurveSearchForm()
+
+                    error = "Co-ordinates could not be found for the data that you entered, are you sure you chose the" \
+                            " right data type? (co-ordinates instead of name)"
+
+                    return render(request, "base_lightcurve.html", {'form': form, 'error': error})
 
             # Covert whatever we have got to FK5
             coords = coords.transform_to('fk5')
