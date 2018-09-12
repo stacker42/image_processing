@@ -1188,6 +1188,10 @@ def lightcurve(request):
 
             lightcurve_data, user_choices = lc.index_stars(coords, radius, dec, request, form)
 
+            if lightcurve_data is None and user_choices is None:
+                return render(request, "base_lightcurve.html",
+                              {'form': form, 'error': 'No stars found for given co-ordinates'})
+
             request.session['lightcurve_data'] = lightcurve_data
 
             return render(request, "base_lightcurve_stars.html", {'user_choices': user_choices, 'lightcurve_data': lightcurve_data})

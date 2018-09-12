@@ -78,8 +78,7 @@ def index_stars(coords, radius, dec, request, form=LightcurveSearchForm()):
 
     # No stars for the coords? Then we can't continue
     if len(lightcurve_data['stars']) == 0:
-        return render(request, "base_lightcurve.html",
-                      {'form': form, 'error': 'No stars found for given co-ordinates'})
+        return None, None
 
     # Get rid of duplicates
     lightcurve_data['filters'] = list(set(lightcurve_data['filters']))
