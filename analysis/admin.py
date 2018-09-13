@@ -13,7 +13,7 @@ admin.site.register(FITSFile)
 admin.site.register(Observation)
 admin.site.register(Object)
 
-UserAdmin.list_display = ('email', 'is_active', 'date_joined', 'is_staff', 'id')
+UserAdmin.list_display = ('email', 'is_active', 'date_joined', 'is_staff', 'id', 'first_name', 'last_name')
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
