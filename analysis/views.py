@@ -26,6 +26,7 @@ from plotly.offline import plot
 import plotly.graph_objs as go
 import csv
 from astropy.coordinates import SkyCoord
+from astropy.coordinates.name_resolve import NameResolveError
 from astropy import units as u
 from django.db.models import Sum
 import itertools
@@ -1138,7 +1139,11 @@ def lightcurve(request):
         if form.is_valid():
             if form.cleaned_data['input_type'] == "NAME":
                 # Lookup using name
-                coords = SkyCoord.from_name(form.cleaned_data['user_input'])
+                try:
+                    coords = SkyCoord.from_name(form.cleaned_data['user_input'])
+                except NameResolveError:
+                    return render(request, "base_lightcurve.html",
+                                  {'form': form, 'error': 'No stars found for given name'})
             else:
                 try:
                     if form.cleaned_data['units']:
