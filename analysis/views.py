@@ -1141,9 +1141,10 @@ def lightcurve(request):
                 # Lookup using name
                 try:
                     coords = SkyCoord.from_name(form.cleaned_data['user_input'])
-                except NameResolveError:
+                except (NameResolveError, AttributeError):
                     return render(request, "base_lightcurve.html",
-                                  {'form': form, 'error': 'No stars found for given name'})
+                                  {'form': form, 'error': 'No stars found for given name / error with looking up name.'
+                                                          'Try co-ordinates instead'})
             else:
                 try:
                     if form.cleaned_data['units']:
