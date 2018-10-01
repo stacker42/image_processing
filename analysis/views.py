@@ -1386,11 +1386,15 @@ def stats(request):
             if filt is 'HA':
                 y_objcount.append(Observation.objects.filter(target=obj, orignal_filter__in=settings.HA_FILTERS).count())
                 # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
-                y_exptimes.append(Observation.objects.filter(target=obj, orignal_filter__in=settings.HA_FILTERS).aggregate(Sum('exptime'))['exptime__sum'])
+                exptime = Observation.objects.filter(target=obj, orignal_filter__in=settings.HA_FILTERS).aggregate(Sum('exptime'))['exptime__sum']
+                if exptime is not None:
+                    y_exptimes.append(exptime / 3600)
             else:
                 y_objcount.append(Observation.objects.exclude(orignal_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).count())
                 # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
-                y_exptimes.append(Observation.objects.exclude(orignal_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).aggregate(Sum('exptime'))['exptime__sum'])
+                exptime = Observation.objects.exclude(orignal_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).aggregate(Sum('exptime'))['exptime__sum']
+                if exptime is not None:
+                    y_exptimes.append(exptime / 3600)
         traces_objcount.append(
             go.Bar(
                 x=x,
@@ -1416,7 +1420,7 @@ def stats(request):
     users = User.objects.all()
     x_userid = []
     y_uploads = []
-    for user in users:
+    for user in users[2:]:
         x_userid.append(user.id)
         y_uploads.append(FITSFile.objects.filter(uploaded_by=user).count())
     trace_uploads = [
@@ -1445,7 +1449,7 @@ def stats(request):
             title='Object'
         ),
         yaxis=dict(
-            title='Exposure time (s)',
+            title='Exposure time (h)',
             type='log'
         )
     )
