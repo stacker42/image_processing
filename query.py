@@ -17,7 +17,9 @@ PASSWORD = 'sps_student'
 class NoStarsException(Exception):
     pass
 
+
 HA_FILTERS = ['HA, ''A', 'A-BAND', 'HA-BAND', 'H-BAND', 'H BAND', 'HA BAND', 'H-ALPHA', 'H ALPHA']
+
 
 def index_stars(coords, radius, dec):
     """
@@ -35,8 +37,6 @@ def index_stars(coords, radius, dec):
         cursor.execute(sql, (coords.ra.degree, radius, dec, coords.ra.degree, radius, dec, dec, radius, dec, radius))
 
         stars = cursor.fetchall()
-
-        print(stars)
 
     lightcurve_data = {}
 
@@ -92,7 +92,9 @@ def index_stars(coords, radius, dec):
 
     # No stars for the coords? Then we can't continue
     if len(lightcurve_data['stars']) == 0:
-        raise NoStarsException("No stars for input co-ordinates")
+        return None, None
+
+    # Below here in this function is exactly the same as the website
 
     # Get rid of duplicates
     lightcurve_data['filters'] = list(set(lightcurve_data['filters']))
@@ -157,8 +159,6 @@ connection = pymysql.connect(host='localhost',
                              charset='utf8mb4',
                              cursorclass=pymysql.cursors.DictCursor)
 
-# From here on out its the same setup as the website lightcurve plotting and download
-
 coords = SkyCoord(args.coords, frame='fk5', unit=u.degree)
 
 # Covert whatever we have got to FK5
@@ -177,6 +177,9 @@ else:
     dec = coords.dec.degree
 
 lightcurve_data, user_choices = index_stars(coords, radius, dec)
+
+if lightcurve_data is None and user_choices is None:
+    raise NoStarsException
 
 
 for cluster in lightcurve_data['seperated']:
