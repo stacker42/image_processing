@@ -1389,12 +1389,16 @@ def stats(request):
                 exptime = Observation.objects.filter(target=obj, orignal_filter__in=settings.HA_FILTERS).aggregate(Sum('exptime'))['exptime__sum']
                 if exptime is not None:
                     y_exptimes.append(exptime / 3600)
+                else:
+                    y_exptimes.append(0)
             else:
                 y_objcount.append(Observation.objects.exclude(orignal_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).count())
                 # Get the sum of all exptimes, and then flatten this using itertools, and then convert it back to a list
                 exptime = Observation.objects.exclude(orignal_filter__in=settings.HA_FILTERS).filter(target=obj, filter=filt).aggregate(Sum('exptime'))['exptime__sum']
                 if exptime is not None:
                     y_exptimes.append(exptime / 3600)
+                else:
+                    y_exptimes.append(0)
         traces_objcount.append(
             go.Bar(
                 x=x,
