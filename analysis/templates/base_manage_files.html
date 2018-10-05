@@ -84,21 +84,24 @@
         function delConfirm(url, filename) {
             if (confirm('You are about to delete ' + filename + ', are you sure?')) {
                 $.post(url);
-                location.reload();
+                alert("Deleting...");
+                window.setTimeout(location.reload(), 2000);
             }
         }
 
         function reprocessConfirm(url, filename) {
             if (confirm('You are about to reprocess ' + filename + ', are you sure?')) {
                 $.post(url);
-                location.reload();
+                alert("Reprocessing...");
+                window.setTimeout(location.reload(), 2000);
             }
         }
 
         function reprocessPhotometryConfirm(url, filename) {
             if (confirm('You are about to reprocess photometry for ' + filename + ', are you sure?')) {
                 $.post(url);
-                location.reload();
+                alert("Reprocessing...");
+                window.setTimeout(location.reload(), 2000);
             }
         }
 
