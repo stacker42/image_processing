@@ -13,7 +13,7 @@ FILTERS_REDOCALIB = ['V', 'R', 'I', 'B']
 
 objects = Object.objects.all()
 for obj in objects:
-    print "obj id: " + str(obj.id)
+    print "obj id: " + str(obj.number)
     for filt in FILTERS_REDOCALIB:
         print "filt: " + str(filt)
         with connection.cursor() as cursor:
