@@ -17,6 +17,6 @@ for obj in objects:
     for filt in FILTERS_REDOCALIB:
         print "filt: " + str(filt)
         with connection.cursor() as cursor:
-            cursor.execute("UPDATE photometry SET calibrated_magnitude = calibrated_magnitude + %s WHERE observations.filter = %s AND photometry.observation_id = observations.id;", [settings.OFFSETS[obj.id][filt], filt])
+            cursor.execute("UPDATE photometry SET calibrated_magnitude = calibrated_magnitude + %s WHERE observations.filter = %s AND photometry.observation_id = observations.id;", [settings.OFFSETS[obj.number][filt], filt])
 
 
