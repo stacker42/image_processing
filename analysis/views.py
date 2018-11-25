@@ -1234,8 +1234,8 @@ def lightcurve(request):
                 traces.append(
                     go.Scatter(
                         # Need to except KeyError and go onto the next filter here
-                        x=[star['date'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['magnitude'] > 0 and star['flags'] < 10], # or calibrated_error = 0
-                        y=[star['calibrated_magnitude'] + Decimal(offset) for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['magnitude'] > 0 and star['flags'] < 10],
+                        x=[star['date'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['magnitude'] > 0], # or calibrated_error = 0
+                        y=[star['calibrated_magnitude'] + Decimal(offset) for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['magnitude'] > 0],
                         error_y=dict(
                             type='data',
                             array=[star['calibrated_error'] for star in lightcurve_data['seperated'][choice] if star['filter'] == f and star['magnitude'] > 0],
