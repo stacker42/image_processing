@@ -555,8 +555,8 @@ def do_calibration(file_id, max_use, min_use):
 
         TemporaryPhotometry.objects.bulk_create(phot_objects)
 
-        if numpy.max(uncertainty_stars) > 0.2:
-            return 'warning', "Are you sure you chose the right filter? Uncertainty greater than 0.2 mag."
+        if numpy.max(uncertainty_stars) > 0.3:
+            return 'warning', "Are you sure you chose the right filter? Uncertainty greater than 0.3 mag."
 
         return True, "Success"
     else:
