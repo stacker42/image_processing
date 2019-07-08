@@ -124,7 +124,7 @@ def do_calibration(file_id, max_use, min_use):
     # which is stored in header 'TIMETIME' by the 'change_header.py' program
     data, header = fits.getdata(os.path.join(settings.FITS_DIRECTORY, fits_file.fits_filename),
                                 header=True)
-    time = header['DATE-OBS']
+    time = observation.date
 
     # get pixel numbers to check if star is near the edge
     xpix = header['NAXIS1']
